@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=db
+      - DB_DATABASE=wikiforms_db
+      - DB_USERNAME=wiki_user
+      - DB_PASSWORD=wiki_secure_pass
+    volumes:
+      - ./backend:/app
+
+  db:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: wikiforms_db
+      MYSQL_USER: wiki_user
+      MYSQL_PASSWORD: wiki_secure_pass
+      MYSQL_ROOT_PASSWORD: root_secure_pass
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
