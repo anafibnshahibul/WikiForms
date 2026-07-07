@@ -42,17 +42,209 @@ WikiForms is an amazing, intuitive, and modern drag-and-drop form builder specia
 
 The system isolates public assets from primary application logic:
 ```text
-├── frontend
+├── docker-compose.yml
+├── LICENSE
+├── README.md
+├── frontend/
+│   ├── README.md
+│   ├── deploy.sh
+│   ├── dist
+│   │   ├── agents.txt
+│   │   ├── assets
+│   │   │   ├── FormBuilder-DuhY64Oq.js
+│   │   │   ├── favicon-hF1YpoPe.svg
+│   │   │   ├── index-DfIME6Xd.css
+│   │   │   ├── index-PudhWcJJ.js
+│   │   │   └── manifest-Ddc4YVGy.json
+│   │   ├── browserconfig.xml
+│   │   ├── capabilities.xml
+│   │   ├── clientaccesspolicy.xml
+│   │   ├── crossdomain.xml
+│   │   ├── favicon.svg
+│   │   ├── fonts
+│   │   │   └── inter-400.woff2
+│   │   ├── hall-of-fame.html
+│   │   ├── humans.txt
+│   │   ├── icons.svg
+│   │   ├── index.html
+│   │   ├── keybase.txt
+│   │   ├── lgappxml.xml
+│   │   ├── llms.txt
+│   │   ├── manifest.json
+│   │   ├── opensearch-style.xsl
+│   │   ├── opensearch.xml
+│   │   ├── pgp-key.txt
+│   │   ├── robots.txt
+│   │   ├── security-policy.html
+│   │   ├── security-report.xml
+│   │   ├── security-report.xsl
+│   │   ├── sitemap.xml
+│   │   └── style.xsl
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── agents.txt
+│   │   ├── browserconfig.xml
+│   │   ├── capabilities.xml
+│   │   ├── clientaccesspolicy.xml
+│   │   ├── crossdomain.xml
+│   │   ├── favicon.svg
+│   │   ├── fonts
+│   │   │   └── inter-400.woff2
+│   │   ├── hall-of-fame.html
+│   │   ├── humans.txt
+│   │   ├── icons.svg
+│   │   ├── keybase.txt
+│   │   ├── lgappxml.xml
+│   │   ├── llms.txt
+│   │   ├── manifest.json
+│   │   ├── opensearch-style.xsl
+│   │   ├── opensearch.xml
+│   │   ├── pgp-key.txt
+│   │   ├── robots.txt
+│   │   ├── security-policy.html
+│   │   ├── security-report.xml
+│   │   ├── security-report.xsl
+│   │   ├── sitemap.xml
+│   │   └── style.xsl
 │   ├── src
+│   │   ├── App.css
+│   │   ├── App.jsx
 │   │   ├── components
-│   │   │   ├── FormBuilder.jsx   # Core drag-and-drop mechanics
-│   │   │   ├── QuizViewer.jsx    # Interactive quiz rendered logic
-│   │   │   ├── Header.jsx        # Navigation system
-│   │   │   └── Footer.jsx        # Platform footer links
-│   │   ├── App.jsx               # Central router and state entry
-│   │   └── i18n.js               # Localization configuration
-│   └── public                    # Public configurations (robots, human, security policies)
-└── backend                       # Core API microservice (Laravel engine)
+│   │   │   ├── Footer.jsx
+│   │   │   ├── FormBuilder.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── QuizViewer.jsx
+│   │   │   └── WelcomeScreen.jsx
+│   │   ├── i18n.js
+│   │   ├── index.css
+│   │   └── main.jsx
+│   └── vite.config.js
+├── backend/
+│   ├── README.md
+│   ├── app
+│   │   ├── Http
+│   │   │   └── Controllers
+│   │   ├── Models
+│   │   │   ├── Quiz.php
+│   │   │   ├── QuizResponse.php
+│   │   │   └── User.php
+│   │   └── Providers
+│   │       └── AppServiceProvider.php
+│   ├── artisan
+│   ├── bootstrap
+│   │   ├── app.php
+│   │   ├── cache
+│   │   │   ├── packages.php
+│   │   │   └── services.php
+│   │   └── providers.php
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── config
+│   │   ├── app.php
+│   │   ├── auth.php
+│   │   ├── cache.php
+│   │   ├── database.php
+│   │   ├── filesystems.php
+│   │   ├── logging.php
+│   │   ├── mail.php
+│   │   ├── queue.php
+│   │   ├── sanctum.php
+│   │   ├── services.php
+│   │   └── session.php
+│   ├── database
+│   │   ├── database.sqlite
+│   │   ├── factories
+│   │   │   └── UserFactory.php
+│   │   ├── migrations
+│   │   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   │   ├── 2026_06_02_144159_create_personal_access_tokens_table.php
+│   │   │   ├── 2026_06_02_145225_create_quizzes_table.php
+│   │   │   ├── 2026_06_02_151323_create_quiz_responses_table.php
+│   │   │   ├── 2026_06_04_061022_create_forms_table.php
+│   │   │   ├── 2026_06_16_000001_add_collaborators_to_forms_table.php
+│   │   │   └── 2026_06_16_000002_add_timer_to_forms.php
+│   │   └── seeders
+│   │       └── DatabaseSeeder.php
+│   ├── package.json
+│   ├── phpunit.xml
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.php
+│   │   ├── robots.txt
+│   │   └── storage
+│   ├── resources
+│   │   ├── css
+│   │   │   └── app.css
+│   │   ├── js
+│   │   │   ├── app.js
+│   │   │   └── bootstrap.js
+│   │   └── views
+│   │       └── welcome.blade.php
+│   ├── routes
+│   │   ├── api.php
+│   │   ├── console.php
+│   │   └── web.php
+│   ├── server.js
+│   ├── storage
+│   │   ├── app
+│   │   │   ├── private
+│   │   │   └── public
+│   │   ├── framework
+│   │   │   ├── cache
+│   │   │   ├── sessions
+│   │   │   ├── testing
+│   │   │   └── views
+│   │   └── logs
+│   │       └── laravel.log
+│   ├── tests
+│   │   ├── Feature
+│   │   │   └── ExampleTest.php
+│   │   ├── TestCase.php
+│   │   └── Unit
+│   │       └── ExampleTest.php
+│   └── vite.config.js
+├── public_html/
+│   ├── agents.txt
+│   ├── api.php
+│   ├── assets
+│   │   ├── FormBuilder-BbwHEhko.js
+│   │   ├── FormBuilder-DuhY64Oq.js
+│   │   ├── favicon-hF1YpoPe.svg
+│   │   ├── index-C3esGQui.js
+│   │   ├── index-DfIME6Xd.css
+│   │   ├── index-PudhWcJJ.js
+│   │   └── manifest-Ddc4YVGy.json
+│   ├── browserconfig.xml
+│   ├── capabilities.xml
+│   ├── clientaccesspolicy.xml
+│   ├── crossdomain.xml
+│   ├── docs.php
+│   ├── favicon.svg
+│   ├── fonts
+│   │   └── inter-400.woff2
+│   ├── hall-of-fame.html
+│   ├── humans.txt
+│   ├── icons.svg
+│   ├── index.html
+│   ├── index.php
+│   ├── keybase.txt
+│   ├── lgappxml.xml
+│   ├── llms.txt
+│   ├── manifest.json
+│   ├── opensearch-style.xsl
+│   ├── opensearch.xml
+│   ├── pgp-key.txt
+│   ├── robots.txt
+│   ├── security-policy.html
+│   ├── security-report.xml
+│   ├── security-report.xsl
+│   ├── sitemap.xml
+│   └── style.xsl
 ```
 
 ---
