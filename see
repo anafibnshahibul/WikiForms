@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Clear the screen for a clean output
+clear
+
+echo "=========================================="
+echo "          SYSTEM INFORMATION REPORT       "
+echo "=========================================="
+echo "Date & Time: $(date)"
+echo "------------------------------------------"
+
+# 1. CPU Usage
+echo "💻 CPU STATUS:"
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS CPU Calculation
+    cpu_idle=$(top -l 1 | grep "CPU usage" | awk '{print $7}' | sed 's/%//')
+    cpu_usage=$(echo "100 - $cpu_idle" | bc)
+    echo "   Current CPU Usage: $cpu_usage%"
+else
+    # Linux CPU Calculation
+    if command -v mpstat &> /dev/null; then
+        cpu_usage=$(mpstat 1 1 | awk '/Average:/ {print 100 - $NF}')
+        echo "   Current CPU Usage: $cpu_usage%"
+    else
+        cpu_load=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+        echo "   Current CPU Usage: $cpu_load%"
+    fi
+fi
+echo "------------------------------------------"
+
+# 2. RAM (Memory) Usage
+echo "🧠 RAM (MEMORY) STATUS:"
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS Memory Calculation
+    echo "   Operating System: macOS"
+    vm_stat | perl -ne '/page size of (\d+) bytes/ and $size=$1; /Pages free:\s+(\d+)/ and printf "   Free RAM: %.2f GB\n", ($1*$size)/1024**3; /Pages active:\s+(\d+)/ and printf "   Used RAM: %.2f GB\n", ($1*$size)/1024**3;'
+else
+    # Linux Memory Calculation
+    free -h | awk 'NR==2{printf "   Total RAM: %s\n   Used RAM:  %s\n   Free RAM:  %s\n", $2, $3, $4}'
+fi
+echo "------------------------------------------"
+
+# 3. Disk Space Status
+echo "💾 DISK SPACE STATUS:"
+df -h / | awk 'NR==2{printf "   Total Size: %s\n   Used Space: %s (%s)\n   Free Space: %s\n", $2, $3, $5, $4}'
+echo "=========================================="

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en-US"> 
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>WikiForms - Amazing Drag and Drop Form Builder for Wikimedia</title>
+  <meta name="description" content="WikiForms - The ultimate drag and drop form builder created specifically for Wikimedia tools, components, and templates." />
+  <meta name="keywords" content="wikiforms, wikimedia, drag and drop, form builder, wiki components, anaf, wikipedia, form builder" />
+  <meta name="author" content="Anaf" />
+  
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+  <meta name="bingbot" content="index, follow" />
+  
+  <meta name="distribution" content="global" />
+  <meta name="rating" content="general" />
+  <meta name="theme-color" content="#3366cc" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="WikiForms - Drag & Drop Form Builder for Wikimedia" />
+  <meta name="twitter:description" content="Create complex forms easily for Wikimedia with our powerful drag and drop tool." />
+  <meta name="twitter:image" content="https://i.ibb.co.com/6R0Lnzc9/Screenshot-2026-06-11-16-53-22.png" />
+
+  <link rel="canonical" href="https://wikiforms.toolforge.org/" />
+
+  <meta name="google" content="imageindex" />
+  <meta name="google" content="notranslate" />
+  <meta name="slurp" content="index, follow" />
+
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="msapplication-navbutton-color" content="#3366cc" />
+
+  <link rel="manifest" href="public/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="WikiForms" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="WikiForms - Drag & Drop Form Builder for Wikimedia" />
+  <meta property="og:description" content="Create complex forms easily for Wikimedia with our powerful drag and drop tool." />
+  <meta property="og:image" content="https://i.ibb.co.com/6R0Lnzc9/Screenshot-2026-06-11-16-53-22.png" />
+  <meta property="og:url" content="https://wikiforms.toolforge.org/" />
+  <meta property="og:site_name" content="WikiForms" />
+
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+  <!-- Windows Tile Configuration -->
+  <meta name="msapplication-config" content="public/browserconfig.xml" />
+  <meta name="msapplication-TileColor" content="#3366cc" />
+  <meta name="msapplication-TileImage" content="/assets/icon-512.png" />
+
+  <link rel="search" type="application/opensearchdescription+xml" title="WikiForms" href="public/opensearch.xml" />
+
+  <meta http-equiv="X-UA-Output-Class" content="no-cache" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+  <meta name="theme-color" content="#3366cc" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1a3a7a" media="(prefers-color-scheme: dark)" />
+  
+  <meta name="generator" content="WikiForms v1.2.0" />
+
+  <meta http-equiv="Accept-CH" content="Device-Memory, Downlink, ECT" />
+
+  <meta name="google-site-verification" content="Irdb1nXlTGJnM0lnrMdZbljfx7pq9mbmcZGfwHI9gPU" />
+  <meta http-equiv="x-dns-prefetch-control" content="off" />
+
+  <link rel="preconnect" href="https://commons.wikimedia.org">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-400.woff2" crossorigin>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "WikiForms",
+      "url": "https://wikiforms.toolforge.org/",
+      "description": "An open-source tool built for the Wikimedia community to make form creation easier. WikiForms bridges the gap between structured data collection and the Wikipedia ecosystem. Built to empower contributors and open-source networks, it offers a secure, intuitive environment for generating high-fidelity document templates and tightly regulated proctored quizzes. With integrated anti-cheat mechanisms and native multi-language support, WikiForm simplifies secure data entry while safeguarding information integrity.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Person",
+        "name": "Anaf Ibn Shahibul"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "Wikimedia Foundation"
+      },
+      "license": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+    </script>
+
+  <script type="speculationrules">
+    {
+      "prerender": [{
+        "source": "list",
+        "urls": ["/index.html"]
+      }]
+    }
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YC9JZBP3V6"></script>
+    <script>
+     window.dataLayer = window.dataLayer || [];
+     function gtag(){dataLayer.push(arguments);}
+     gtag('js', new Date());
+
+     gtag('config', 'G-YC9JZBP3V6');
+    </script>
+
+   <script>
+  if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('speculationrules')) {
+    const preloadedUrls = {};
+    function pointerenterHandler() {
+      if (!preloadedUrls[this.href]) {
+        preloadedUrls[this.href] = true;
+        const prefetcher = document.createElement('link');
+        prefetcher.as = prefetcher.relList.supports('prefetch') ? 'document' : 'fetch';
+        prefetcher.rel = prefetcher.relList.supports('prefetch') ? 'prefetch' : 'preload';
+        prefetcher.href = this.href;
+        document.head.appendChild(prefetcher);
+      }
+    }
+    document.querySelectorAll('a[href^="/"]').forEach(item => {
+      item.addEventListener('pointerenter', pointerenterHandler);
+    });
+  }
+  </script>
+
+
+    <script id="usercentrics-cmp" src="https://app.usercentrics.eu/browser-ui/latest/loader.js" data-settings-id="--kmt8Bsm2Ev3M" async></script>
+
+    <style>
+      #root:empty {
+        display: none;
+      }
+    </style>
+
+  <style>
+    :root {
+      --wiki-blue: #3366cc;
+      --wiki-green: #00af89;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f8f9fa;
+    }
+
+    #app-preloader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    #app-preloader.loaded {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loader-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100px;
+      height: 100px;
+    }
+
+    .animated-ring {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--wiki-blue);
+      border-bottom: 4px solid var(--wiki-green);
+      border-radius: 50%;
+      animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+
+    .loader-logo {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      z-index: 10;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 25px;
+      font-size: 15px;
+      color: #202122;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body data-app-version="1.2.0" data-framework="react" data-platform="web">
+  
+  <div id="app-preloader">
+    <div class="loader-container">
+      <div class="animated-ring"></div>
+      <svg class="loader-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 3C4.34315 3 3 4.34315 3 6V26C3 27.6569 4.34315 29 6 29H26C27.6569 29 29 27.6569 29 26V6C29 4.34315 27.6569 3 26 3H6Z" fill="#3366cc" />
+        <path d="M9 10L12 21L15 13L18 21L21 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="23" cy="23" r="5" fill="#00af89" />
+        <path d="M21 23L22.5 24.5L25 21.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </div>
+    <div class="loading-text">Starting WikiForms...</div>
+  </div>
+
+  <div id="offline-indicator" style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; width: -webkit-fill-available; background: #d33; color: white; text-align: center; padding: 10px; font-weight: bold; z-index: 99999;">
+    ⚠️ You are currently offline. Your progress might not be saved!
+  </div>
+
+  <noscript>
+    <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+      <h2>JavaScript Required</h2>
+      <p>This website requires JavaScript to work properly. Please enable it in your browser settings.</p>
+    </div>
+  </noscript>
+
+  <div id="app-live-announcer" aria-live="assertive" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+    WikiForms is loading, please wait.
+  </div>
+
+  <div id="root"></div>
+
+  <div id="offline-indicator" style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; width: -webkit-fill-available; background: #d33; color: white; text-align: center; padding: 10px; font-weight: bold; z-index: 99999;">
+    ⚠️ You are currently offline. Your progress might not be saved!
+  </div>
+
+  <noscript>
+    <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+      <h2>JavaScript Required</h2>
+      <p>This website requires JavaScript to work properly. Please enable it in your browser settings.</p>
+    </div>
+  </noscript>
+
+  <div id="app-live-announcer" aria-live="assertive" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+    WikiForms is loading, please wait.
+  </div>
+
+<div id="root"></div>
+
+  <div id="react-crash-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 99999; padding: 40px; font-family: sans-serif;">
+    <h2 style="color: #d33;">Oops! Something went wrong.</h2>
+    <p>The application crashed unexpectedly. Please try refreshing the page.</p>
+    <button onclick="window.location.reload()" style="background: #3366cc; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Reload WikiForms</button>
+  </div>
+
+  <script type="module">
+    function hideLoader() {
+      const preloader = document.getElementById('app-preloader');
+      if (preloader && !preloader.classList.contains('loaded')) {
+        preloader.classList.add('loaded');
+        setTimeout(() => preloader.remove(), 400); 
+      }
+    }
+
+    window.addEventListener('load', hideLoader);
+    setTimeout(hideLoader, 1000);
+
+    window.addEventListener('online', () => document.getElementById('offline-indicator').style.display = 'none');
+    window.addEventListener('offline', () => document.getElementById('offline-indicator').style.display = 'block');
+  </script>
+
+  <script type="module">
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.performance && window.performance.timing) {
+          const p = window.performance.timing;
+          const loadTime = p.loadEventEnd - p.navigationStart;
+          console.log(`%c🚀 WikiForms Loaded in: ${loadTime}ms`, "color: #3366cc; font-weight: bold;");
+        }
+      }, 0);
+    });
+  </script>
+
+  <script type="module" src="/src/main.jsx"></script>
+
+  
+
+  <script>
+    setTimeout(function() {
+      var el = document.getElementById('app-preloader');
+      if (el) {
+        el.style.transition = 'opacity 0.3s ease';
+        el.style.opacity = '0';
+        setTimeout(function() { el.style.display = 'none'; }, 300);
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

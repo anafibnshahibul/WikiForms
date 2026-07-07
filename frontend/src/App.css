@@ -1,0 +1,479 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/inter-400.woff2') format('woff2');
+}
+
+/* =====================================================
+   WikiForms Global Stylesheet
+   ===================================================== */
+
+:root {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --border: #a2a9b1;
+  --border-light: #eaecf0;
+  --text-primary: #202122;
+  --text-secondary: #475467;
+  --text-muted: #6b7280;
+  --wiki-blue: #3366cc;
+  --wiki-blue-hover: #4477dd;
+  --wiki-green: #00af89;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.10);
+  --radius: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2e3244;
+    --border-light: #252836;
+    --text-primary: #f1f3f5;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.5);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Layout */
+.wikiform-main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.wikiform-container {
+  max-width: 780px;
+  width: 100%;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+/* Header */
+.wiki-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wiki-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.wiki-brand strong { color: var(--text-primary); }
+
+.wiki-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lang-selector {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Buttons */
+.wiki-btn {
+  background: var(--wiki-blue);
+  color: #fff;
+  border: 1px solid var(--wiki-blue);
+  border-radius: var(--radius);
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: 38px;
+}
+.wiki-btn:hover { background: var(--wiki-blue-hover); border-color: var(--wiki-blue-hover); }
+.wiki-btn:active { opacity: 0.9; }
+
+.wiki-btn-secondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+  min-height: 38px;
+}
+.wiki-btn-secondary:hover { background: var(--bg); }
+
+/* Cards */
+.wiki-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+.wiki-card.accent-blue  { border-top: 4px solid var(--wiki-blue); }
+.wiki-card.accent-green { border-top: 4px solid var(--wiki-green); }
+
+/* Inputs */
+.input-field {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.input-field:focus { border-color: var(--wiki-blue); }
+
+/* Welcome */
+.welcome-wrapper {
+  padding: 24px 16px;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.welcome-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 40px 32px;
+  max-width: 760px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+  box-sizing: border-box;
+}
+
+.welcome-badge {
+  display: inline-block;
+  background: #eaf3ff;
+  color: var(--wiki-blue);
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  .welcome-badge { background: rgba(51,102,204,0.2); }
+}
+
+.welcome-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 16px 0 0;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.welcome-divider {
+  border: 0;
+  height: 1px;
+  background: var(--border-light);
+  margin: 20px auto;
+  max-width: 100px;
+}
+
+.welcome-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  text-align: justify;
+  max-width: 680px;
+  margin: 0 auto 32px;
+}
+
+.welcome-cta {
+  padding: 14px 44px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Type Select */
+.select-wrapper { text-align: center; animation: fadeIn 0.4s ease; padding: 16px; }
+.select-title { font-size: 26px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.select-desc { color: var(--text-secondary); margin-bottom: 28px; font-size: 15px; }
+
+.select-grid {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.type-card {
+  background: var(--surface);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 20px;
+  width: 200px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  box-sizing: border-box;
+}
+.type-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 8px; }
+.type-card p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+.type-card--form:hover { border-color: var(--wiki-blue); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(51,102,204,0.12); }
+.type-card--quiz:hover { border-color: var(--wiki-green); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,175,137,0.12); }
+
+.type-icon-wrap {
+  width: 60px; height: 60px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+}
+.type-icon-wrap--blue  { background: #eaf3ff; }
+.type-icon-wrap--green { background: #e6f7f3; }
+
+@media (prefers-color-scheme: dark) {
+  .type-icon-wrap--blue  { background: rgba(51,102,204,0.15); }
+  .type-icon-wrap--green { background: rgba(0,175,137,0.15); }
+}
+
+/* FormBuilder Grid */
+.fb-grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+/* Mobile FAB */
+.fb-mobile-add {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 200;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.fb-mobile-fab {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #3366cc;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(51,102,204,0.4);
+  font-size: 24px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.fb-mobile-fab-menu {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.fb-mobile-fab-item {
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 500;
+}
+.fb-mobile-fab-item:hover { background: var(--bg); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================================================
+   RESPONSIVE BREAKPOINTS
+   ===================================================== */
+
+/* Tablet & Mobile */
+@media (max-width: 900px) {
+  .fb-grid {
+    grid-template-columns: 1fr;
+  }
+  .fb-sidebar {
+    display: none !important;
+  }
+  .fb-mobile-add {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .welcome-card {
+    padding: 28px 20px;
+    border-radius: var(--radius-lg);
+  }
+  .welcome-title { font-size: 28px; }
+  .welcome-desc { font-size: 14px; text-align: left; }
+  .welcome-cta { padding: 12px 32px; width: 100%; }
+
+  .type-card { width: 100%; max-width: 280px; }
+
+  .wiki-header { padding: 8px 12px; }
+  .wikiform-container { padding: 0 12px; margin: 16px auto; }
+
+  .wiki-btn, .wiki-btn-secondary {
+    padding: 11px 16px;
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .fb-settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .fb-actions {
+    flex-direction: column;
+  }
+  .fb-actions button, .fb-actions a {
+    width: 100%;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-title { font-size: 24px; }
+  .select-title { font-size: 22px; }
+  .wiki-header { gap: 6px; }
+}
+
+/* iPad / Tablet specific */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .fb-grid {
+    grid-template-columns: 1fr 220px;
+  }
+  .welcome-card { padding: 36px 28px; }
+  .wikiform-container { max-width: 680px; }
+}
+
+/* Warning Banner */
+.status-warning {
+  background: #fffaeb;
+  border: 1px solid #f79009;
+  border-left: 4px solid #f79009;
+  color: #b54708;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: shake 0.3s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status-warning {
+    background: rgba(247,144,9,0.1);
+    border-color: #f79009;
+    color: #fec84b;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* Header username — desktop only */
+.header-username {
+  display: inline;
+}
+@media (max-width: 768px) {
+  .header-username {
+    display: none !important;
+  }
+}

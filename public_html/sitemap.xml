@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="style.xsl"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+      <loc>https://wikiforms.toolforge.org/</loc>
+      <priority>1.0</priority>
+   </url>
+   <url>
+      <loc>https://wikiforms.toolforge.org/hall-of-fame.html</loc>
+      <priority>0.7</priority>
+   </url>
+   <url>
+      <loc>https://wikiforms.toolforge.org/security-policy.html</loc>
+      <priority>0.67</priority>
+   </url>
+   <url>
+      <loc>https://wikiforms.toolforge.org/docs.php</loc>
+      <priority>0.8</priority>
+   </url>
+   <url>
+      <loc>https://wikiforms.toolforge.org/pgp-key.txt</loc>
+      <priority>0</priority>
+   </url>
+</urlset>

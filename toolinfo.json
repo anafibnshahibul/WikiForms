@@ -1,0 +1,9 @@
+{
+    "name": "wikiforms",
+    "title": "WikiForms",
+    "description": "Amazing Drag and Drop Form Builder for Wikimedia",
+    "url": "https://wikiforms.toolforge.org",
+    "keywords": "wikimedia, forms, drag-and-drop",
+    "author": "Anaf",
+    "repository": "https://gitlab.wikimedia.org/toolforge-repos/wikiforms"
+  }

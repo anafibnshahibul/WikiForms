@@ -1,0 +1,7 @@
+# IETF Internet-Draft AI Crawler Control
+User-agent: GPTBot
+Disallow: /templates/
+User-agent: ClaudeBot
+Disallow: /components/
+User-agent: *
+Allow: /

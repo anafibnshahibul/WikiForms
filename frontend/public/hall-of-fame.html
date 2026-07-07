@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Hall of Fame - WikiForms</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            padding: 40px 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(51, 102, 204, 0.1);
+        }
+        h1 {
+            color: rgb(51, 102, 204);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #718096;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: rgb(51, 102, 204);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .list-container {
+            margin-top: 30px;
+            border-top: 2px solid #e2e8f0;
+            padding-top: 20px;
+        }
+        .contributor-card {
+            background: #f8fafc;
+            border-left: 4px solid rgb(51, 102, 204);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 6px 6px 0;
+        }
+        .name {
+            font-weight: bold;
+            color: #1a202c;
+        }
+        .date {
+            font-size: 12px;
+            color: #a0aec0;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        <h1>🏅 Security Hall of Fame</h1>
+        <p>We deeply appreciate the efforts of security researchers who help keep WikiForms and the Wikimedia community safe by responsibly reporting vulnerabilities.</p>
+        
+        <div class="list-container">
+            <div class="contributor-card">
+                <span class="date" id="current-date">Loading...</span>
+                <div class="name">Your Name Could Be Here!</div>
+                <p style="margin: 5px 0 0 0; font-size: 14px;">This spot is reserved for the first researcher who responsibly reports a valid security bug.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const today = new Date();
+        const options = { month: 'long', year: 'numeric' };
+        const formattedDate = today.toLocaleDateString('en-US', options);
+        
+        document.getElementById('current-date').innerText = formattedDate;
+    </script>
+</body>
+</html>

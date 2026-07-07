@@ -1,0 +1,31 @@
+{
+    "short_name": "WikiForms",
+    "name": "WikiForms - Drag & Drop Form Builder for Wikimedia",
+    "description": "The ultimate drag and drop form builder created specifically for Wikimedia tools, components, and templates.",
+    "icons": [
+      {
+        "src": "/assets/favicon-hF1YpoPe.svg",
+        "sizes": "any",
+        "type": "image/svg+xml",
+        "purpose": "any"
+      },
+      {
+        "src": "/assets/icon-192.png",
+        "type": "image/png",
+        "sizes": "192x192",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icon-512.png",
+        "type": "image/png",
+        "sizes": "512x512",
+        "purpose": "any maskable"
+      }
+    ],
+    "start_url": "/",
+    "background_color": "#ffffff",
+    "theme_color": "#3366cc",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "categories": ["developer", "utilities"]
+  }

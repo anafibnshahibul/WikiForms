@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/security-report.xsl"?>
+<securityAudit system="WikiForms" generationTime="2026-07-04T14:20:00Z">
+    <policyEnforcement status="COMPLIANT">
+        <control id="SEC-001" name="Content Security Policy" state="ACTIVE"/>
+        <control id="SEC-002" name="Strict Transport Security" state="ACTIVE"/>
+        <control id="SEC-003" name="Cross-Origin Isolation" state="ACTIVE"/>
+    </policyEnforcement>
+    <vulnerabilities total="0">
+        <severity low="0" medium="0" high="0" critical="0"/>
+    </vulnerabilities>
+</securityAudit>

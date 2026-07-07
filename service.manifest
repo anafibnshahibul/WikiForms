@@ -1,0 +1,6 @@
+# This file is used by Toolforge infrastructure.
+# Please do not edit manually at this time.
+# Sun Jul  5 15:22:23 2026
+backend: kubernetes
+version: 4
+web: php8.2
