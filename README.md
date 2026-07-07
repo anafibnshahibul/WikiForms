@@ -38,6 +38,53 @@ WikiForms is an amazing, intuitive, and modern drag-and-drop form builder specia
 
 ---
 
+## 🐋 Local Docker Setup Guide
+
+Follow these steps to spin up the local development environment using Docker:
+
+### Prerequisites
+Make sure you have the following installed on your machine:
+* Docker Desktop (or Engine)
+* Docker Compose V2
+
+### 1. File Infrastructure
+Ensure you have created the configuration files (`Dockerfile` inside `frontend/`, `Dockerfile` inside `backend/`, and `docker-compose.yml` in the root) as mapped out by your project generation wizard.
+
+### 2. Launching Containers
+Open your terminal at the root folder of the project and execute the build command:
+```bash
+docker compose up -d --build
+```
+*This command runs the processes in detached mode (`-d`), downloading and packaging the React, Laravel, and MySQL networks simultaneously.*
+
+### 3. Running Backend Services
+Once the containers are successfully online, execute your asset compilation, application key generation, and database scaffolding:
+```bash
+# Generate the application encryption key
+docker compose exec backend php artisan key:generate
+
+# Build database structures and run schemas
+docker compose exec backend php artisan migrate
+```
+
+### 4. Port Configuration Mappings
+Once fully initialized, your services will be bound to the following network ports locally:
+
+| Service | Technology | Access Link |
+| :--- | :--- | :--- |
+| **Frontend** | React (Vite) | `http://localhost:5173` |
+| **Backend** | Laravel (Artisan) | `http://localhost:8000` |
+| **Database** | MySQL Server | `localhost:3306` |
+
+---
+
+## 🔒 Security & Optimization Best Practices
+
+* **System Policies:** Cross-domain access rules and structural XML metadata are kept natively inside the public static layer to support Wikimedia security-report protocols.
+* **State Syncing:** Hot module reloading (HMR) maps code updates in your terminal to your container instances dynamically during active coding sessions.
+
+---
+
 ## 📂 System Overview (Core Structure)
 
 The system isolates public assets from primary application logic:
@@ -246,53 +293,6 @@ The system isolates public assets from primary application logic:
 │   ├── sitemap.xml
 │   └── style.xsl
 ```
-
----
-
-## 🐋 Local Docker Setup Guide
-
-Follow these steps to spin up the local development environment using Docker:
-
-### Prerequisites
-Make sure you have the following installed on your machine:
-* Docker Desktop (or Engine)
-* Docker Compose V2
-
-### 1. File Infrastructure
-Ensure you have created the configuration files (`Dockerfile` inside `frontend/`, `Dockerfile` inside `backend/`, and `docker-compose.yml` in the root) as mapped out by your project generation wizard.
-
-### 2. Launching Containers
-Open your terminal at the root folder of the project and execute the build command:
-```bash
-docker compose up -d --build
-```
-*This command runs the processes in detached mode (`-d`), downloading and packaging the React, Laravel, and MySQL networks simultaneously.*
-
-### 3. Running Backend Services
-Once the containers are successfully online, execute your asset compilation, application key generation, and database scaffolding:
-```bash
-# Generate the application encryption key
-docker compose exec backend php artisan key:generate
-
-# Build database structures and run schemas
-docker compose exec backend php artisan migrate
-```
-
-### 4. Port Configuration Mappings
-Once fully initialized, your services will be bound to the following network ports locally:
-
-| Service | Technology | Access Link |
-| :--- | :--- | :--- |
-| **Frontend** | React (Vite) | `http://localhost:5173` |
-| **Backend** | Laravel (Artisan) | `http://localhost:8000` |
-| **Database** | MySQL Server | `localhost:3306` |
-
----
-
-## 🔒 Security & Optimization Best Practices
-
-* **System Policies:** Cross-domain access rules and structural XML metadata are kept natively inside the public static layer to support Wikimedia security-report protocols.
-* **State Syncing:** Hot module reloading (HMR) maps code updates in your terminal to your container instances dynamically during active coding sessions.
 
 ---
 
