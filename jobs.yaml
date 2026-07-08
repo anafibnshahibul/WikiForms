@@ -1,0 +1,6 @@
+---
+- name: daily-cache-clean
+  command: python3 /data/project/wikiforms/clean_cache.py
+  schedule: "0 3 * * *"
+  image: python3.11
+  filelog: true
