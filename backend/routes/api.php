@@ -4,6 +4,22 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
+// Reject requests not originating from the official domain.
+// Checks both Origin and Referer headers — spoofing both from a browser is not possible.
+// Note: curl/Postman can spoof these, but that is acceptable for a public web tool.
+$origin  = request()->header('Origin', '');
+$referer = request()->header('Referer', '');
+$allowed = 'https://wikiforms.toolforge.org';
+
+$isAllowed = str_starts_with($origin, $allowed) || str_starts_with($referer, $allowed);
+
+// Allow server-side / CLI calls (no Origin/Referer) only in non-production
+$isCLI = empty($origin) && empty($referer);
+
+if (!$isAllowed && !$isCLI) {
+    abort(403, 'Requests from unauthorized origins are not allowed.');
+}
+
 Route::middleware('throttle:20,1')->group(function () {
 
     Route::get('/test-connection', function () {

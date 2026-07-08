@@ -3,6 +3,7 @@ import './App.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import WelcomeScreen from './components/WelcomeScreen';
+const ContributeEditor = React.lazy(() => import('./components/ContributeEditor'));
 import { loadLang } from './i18n';
 const FormBuilder = React.lazy(() => import('./components/FormBuilder'));
 import QuizViewer from './components/QuizViewer';
@@ -25,6 +26,7 @@ function App() {
     try { return JSON.parse(localStorage.getItem('wf_user')) || null; } catch { return null; }
   });
   const [isViewMode, setIsViewMode] = useState(false);
+  const [isContributeMode, setIsContributeMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remoteData, setRemoteData] = useState(null);
@@ -48,7 +50,9 @@ function App() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    if (path.startsWith('/view/')) {
+    if (path === '/contribute') {
+      setIsContributeMode(true);
+    } else if (path.startsWith('/view/')) {
       setIsViewMode(true);
       setLoading(true);
       const slug = path.replace('/view/', '');
@@ -213,6 +217,7 @@ function App() {
 
   const showViewer = isViewMode && !isEditMode;
   const showBuilder = isEditMode || appStep === 'builder';
+  const showContribute = isContributeMode && !isEditMode;
 
   return (
     <div className="wikiform-main-layout">
@@ -220,7 +225,11 @@ function App() {
         onLogout={handleLogout} lang={lang} onChangeLanguage={handleChangeLang}
         T={T} translations={translations} />
       <main style={{ flex: 1 }}>
-        {showViewer ? (
+        {showContribute ? (
+          <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
+            <ContributeEditor T={T} wikiUser={wikiUser} onLogin={handleWikipediaLogin} lang={lang} />
+          </React.Suspense>
+        ) : showViewer ? (
           loading
             ? <div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>
             : !remoteData

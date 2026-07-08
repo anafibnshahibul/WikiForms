@@ -70,6 +70,10 @@ function Header({ wikiUser, onLogin, onLogout, lang, onChangeLanguage, T, transl
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{displayName}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{T('wiki_account')}</div>
                   </div>
+                  <a href="/contribute"
+                    style={{ display: 'block', width: '100%', padding: '12px 16px', textDecoration: 'none', fontSize: '14px', color: '#3366cc', fontWeight: '600', borderBottom: '1px solid var(--border-light)' }}>
+                    🌐 {T('contribute')}
+                  </a>
                   <button onClick={() => { onLogout(); setShowMenu(false); }}
                     style={{ width: '100%', padding: '12px 16px', border: 'none', background: 'none', textAlign: 'left', fontSize: '14px', color: '#d92d20', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '500' }}>
                     {T('header_logout')}

@@ -295,4 +295,8 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
   );
 }
 
+<<<<<<< Updated upstream
 export default ContributeEditor;
+=======
+export default ContributeEditor;
+>>>>>>> Stashed changes

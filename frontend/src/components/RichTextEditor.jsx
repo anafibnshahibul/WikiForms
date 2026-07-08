@@ -248,4 +248,8 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style 
   );
 }
 
+<<<<<<< Updated upstream
 export default RichTextEditor;
+=======
+export default RichTextEditor;
+>>>>>>> Stashed changes
