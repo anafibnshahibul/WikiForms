@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import RichTextEditor from './RichTextEditor';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -59,13 +60,13 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
           <div style={{ fontSize: '11px', fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '7px' }}>
             {FIELD_TYPES.find(f => f.value === field.type)?.label || 'Field'} #{idx + 1}
           </div>
-          <input type="text" placeholder={contentType === 'quiz' ? 'Enter question...' : 'Enter field label...'}
-            value={field.text}
-            onChange={e => { e.stopPropagation(); updateField(field.id, 'text', e.target.value); }}
-            onClick={e => e.stopPropagation()}
-            onPointerDown={e => e.stopPropagation()}
-            style={{ width: '100%', padding: '7px 0', border: 'none', borderBottom: '1px solid var(--border-light)', fontSize: '15px', fontWeight: '500', outline: 'none', background: 'transparent', color: 'var(--text-primary)', boxSizing: 'border-box', cursor: 'text' }}
-          />
+          <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+            <RichTextEditor
+              value={field.text}
+              onChange={val => updateField(field.id, 'text', val)}
+              placeholder={contentType === 'quiz' ? 'Enter question...' : 'Enter field label...'}
+            />
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }} onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <button onClick={e => { e.stopPropagation(); duplicateField(field); }}
