@@ -163,6 +163,7 @@ The system isolates public assets from primary application logic:
 │   │   │   ├── Footer.jsx
 │   │   │   ├── FormBuilder.jsx
 │   │   │   ├── Header.jsx
+│   │   │   ├── RichTextEditor.jsx
 │   │   │   ├── QuizViewer.jsx
 │   │   │   └── WelcomeScreen.jsx
 │   │   ├── i18n.js
