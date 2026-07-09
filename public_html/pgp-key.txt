@@ -1,8 +1,0 @@
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: OpenPGP.js v4.10.1
-Comment: https://openpgpjs.org
-
-xsFNBFmG6kEBEADbVz3oKzXvJ8XyZ9Y8nKJ9... [This is a placeholder]
-Please replace this text with your actual Public PGP Key later.
-You can generate one using GPG tools or online PGP generators.
------END PGP PUBLIC KEY BLOCK-----

@@ -91,42 +91,11 @@ The system isolates public assets from primary application logic:
 ```text
 ├── docker-compose.yml
 ├── LICENSE
+├── jobs.yaml
 ├── README.md
 ├── frontend/
 │   ├── README.md
 │   ├── deploy.sh
-│   ├── dist
-│   │   ├── agents.txt
-│   │   ├── assets
-│   │   │   ├── FormBuilder-DuhY64Oq.js
-│   │   │   ├── favicon-hF1YpoPe.svg
-│   │   │   ├── index-DfIME6Xd.css
-│   │   │   ├── index-PudhWcJJ.js
-│   │   │   └── manifest-Ddc4YVGy.json
-│   │   ├── browserconfig.xml
-│   │   ├── capabilities.xml
-│   │   ├── clientaccesspolicy.xml
-│   │   ├── crossdomain.xml
-│   │   ├── favicon.svg
-│   │   ├── fonts
-│   │   │   └── inter-400.woff2
-│   │   ├── hall-of-fame.html
-│   │   ├── humans.txt
-│   │   ├── icons.svg
-│   │   ├── index.html
-│   │   ├── keybase.txt
-│   │   ├── lgappxml.xml
-│   │   ├── llms.txt
-│   │   ├── manifest.json
-│   │   ├── opensearch-style.xsl
-│   │   ├── opensearch.xml
-│   │   ├── pgp-key.txt
-│   │   ├── robots.txt
-│   │   ├── security-policy.html
-│   │   ├── security-report.xml
-│   │   ├── security-report.xsl
-│   │   ├── sitemap.xml
-│   │   └── style.xsl
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── package-lock.json
@@ -256,43 +225,6 @@ The system isolates public assets from primary application logic:
 │   │   └── Unit
 │   │       └── ExampleTest.php
 │   └── vite.config.js
-├── public_html/
-│   ├── agents.txt
-│   ├── api.php
-│   ├── assets
-│   │   ├── FormBuilder-BbwHEhko.js
-│   │   ├── FormBuilder-DuhY64Oq.js
-│   │   ├── favicon-hF1YpoPe.svg
-│   │   ├── index-C3esGQui.js
-│   │   ├── index-DfIME6Xd.css
-│   │   ├── index-PudhWcJJ.js
-│   │   └── manifest-Ddc4YVGy.json
-│   ├── browserconfig.xml
-│   ├── capabilities.xml
-│   ├── clientaccesspolicy.xml
-│   ├── crossdomain.xml
-│   ├── docs.php
-│   ├── favicon.svg
-│   ├── fonts
-│   │   └── inter-400.woff2
-│   ├── hall-of-fame.html
-│   ├── humans.txt
-│   ├── icons.svg
-│   ├── index.html
-│   ├── index.php
-│   ├── keybase.txt
-│   ├── lgappxml.xml
-│   ├── llms.txt
-│   ├── manifest.json
-│   ├── opensearch-style.xsl
-│   ├── opensearch.xml
-│   ├── pgp-key.txt
-│   ├── robots.txt
-│   ├── security-policy.html
-│   ├── security-report.xml
-│   ├── security-report.xsl
-│   ├── sitemap.xml
-│   └── style.xsl
 ```
 
 ---
