@@ -18,6 +18,6 @@ If you discover a vulnerability (e.g., SQL Injection in Laravel backend, XSS in 
 
 1. Send an email with your findings to the repository maintainer or open a private security advisory on GitHub.
 2. Include detailed steps, payloads, or screenshots to reproduce the issue.
-3. Allow us up to 72 hours to acknowledge the report and prepare a hotfix before disclosing the issue publicly.
+3. As this tool is currently maintained by a volunteer developer, we will acknowledge your report as soon as possible and work diligently on a fix. We kindly ask for a reasonable coordinated disclosure timeline before the issue is discussed publicly.
 
-Validated security researchers will be permanently recognized on our live [Hall of Fame](https://toolforge.org) ledger.
+Validated security researchers will be permanently recognized on our live [Hall of Fame](https://wikiforms.toolforge.org/hall-of-fame.html) ledger.
