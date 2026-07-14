@@ -69,7 +69,27 @@ class WikiAuthController extends Controller
 
             Auth::login($user, true);
 
-            $userJson = json_encode(['username' => $username, 'email' => $email]);
+            // Store username in session for server-side auth on protected API routes
+            session(['wf_username' => $username]);
+
+            // Generate HMAC-signed token so the frontend can prove identity
+            // without relying on session cookies across popup/main-window boundary.
+            // Format: username|timestamp|hmac(username|timestamp, APP_KEY)
+            $ts        = time();
+            $payload   = $username . '|' . $ts;
+            $signature = hash_hmac('sha256', $payload, config('app.key'));
+            $authToken = base64_encode($payload . '|' . $signature);
+
+            // Also generate a one-time session-init token
+            $sessionToken = bin2hex(random_bytes(24));
+            cache()->put('wf_auth_token_' . $sessionToken, $username, now()->addMinutes(2));
+
+            $userJson = json_encode([
+                'username'      => $username,
+                'email'         => $email,
+                'auth_token'    => $authToken,
+                'session_token' => $sessionToken,
+            ]);
             return $this->renderResult('WIKI_AUTH_SUCCESS', $userJson, null);
 
         } catch (\Exception $e) {

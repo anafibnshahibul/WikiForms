@@ -1,52 +1,62 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 // Supported Wikipedia interwiki prefixes
-const WIKI_PREFIXES = {
-  'w':    'https://en.wikipedia.org/wiki/',
-  'w:en': 'https://en.wikipedia.org/wiki/',
-  'w:bn': 'https://bn.wikipedia.org/wiki/',
-  'w:fr': 'https://fr.wikipedia.org/wiki/',
-  'w:es': 'https://es.wikipedia.org/wiki/',
-  'w:de': 'https://de.wikipedia.org/wiki/',
-  'w:ar': 'https://ar.wikipedia.org/wiki/',
-  'mw':   'https://www.mediawiki.org/wiki/',
-  'q':    'https://en.wikiquote.org/wiki/',
-  'q:en': 'https://en.wikiquote.org/wiki/',
-  'q:bn': 'https://bn.wikiquote.org/wiki/',
-  'wikt': 'https://en.wiktionary.org/wiki/',
-  'b':    'https://en.wikibooks.org/wiki/',
-  'n':    'https://en.wikinews.org/wiki/',
-  's':    'https://en.wikisource.org/wiki/',
-  'commons': 'https://commons.wikimedia.org/wiki/',
+// Maps first parameter to base domain
+const WIKI_DOMAINS = {
+  'w':       'wikipedia.org',
+  'q':       'wikiquote.org',
+  'n':       'wikinews.org',
+  's':       'wikisource.org',
+  'b':       'wikibooks.org',
+  'v':       'wikiversity.org',
+  'voy':     'wikivoyage.org',
+  't':       'wiktionary.org',
+  'wikt':    'wiktionary.org',
+  'mw':      'mediawiki.org',
+  'meta':    'meta.wikimedia.org',
+  'wd':      'wikidata.org',
+  'd':       'wikidata.org',
+  'commons': 'commons.wikimedia.org',
+  'c':       'commons.wikimedia.org',
+  'species': 'species.wikimedia.org',
+  'wmf':     'wikimediafoundation.org',
+  'tools':   'tools.wmflabs.org',
 };
+
+// Single-domain sites (no language prefix)
+const WIKI_NO_LANG = new Set([
+  'mw','meta','wd','d','commons','c','species','wmf','tools'
+]);
 
 function resolveWikiLink(input) {
   const trimmed = input.trim();
-  const colonIdx = trimmed.indexOf(':');
-  if (colonIdx === -1) return null;
+  const parts   = trimmed.split(':').map(s => s.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
 
-  // Check two-part prefix first (e.g. w:bn)
-  const possibleTwo = trimmed.slice(0, colonIdx);
-  const afterFirst   = trimmed.slice(colonIdx + 1);
-  const colonIdx2    = afterFirst.indexOf(':');
+  const site    = parts[0].toLowerCase();
+  const domain  = WIKI_DOMAINS[site];
+  if (!domain) return null;
 
-  if (colonIdx2 !== -1) {
-    const twoPrefix = possibleTwo + ':' + afterFirst.slice(0, colonIdx2);
-    const article   = afterFirst.slice(colonIdx2 + 1);
-    if (WIKI_PREFIXES[twoPrefix] && article) {
-      return WIKI_PREFIXES[twoPrefix] + encodeURIComponent(article.replace(/ /g, '_'));
-    }
+  // Single-domain sites: w:Article or meta:Article
+  if (WIKI_NO_LANG.has(site)) {
+    const article = parts.slice(1).join(':');
+    return `https://${domain}/wiki/${encodeURIComponent(article.replace(/ /g, '_'))}`;
   }
 
-  // Single prefix (e.g. w, mw, q)
-  const onePrefix = possibleTwo;
-  const article   = afterFirst;
-  if (WIKI_PREFIXES[onePrefix] && article) {
-    return WIKI_PREFIXES[onePrefix] + encodeURIComponent(article.replace(/ /g, '_'));
+  // Multi-lang sites: w:en:Article or w:Article (defaults to en)
+  if (parts.length === 2) {
+    // w:Article — default lang en
+    const article = parts[1];
+    return `https://en.${domain}/wiki/${encodeURIComponent(article.replace(/ /g, '_'))}`;
   }
 
-  return null;
+  // w:bn:Article
+  const lang    = parts[1].toLowerCase();
+  const article = parts.slice(2).join(':');
+  return `https://${lang}.${domain}/wiki/${encodeURIComponent(article.replace(/ /g, '_'))}`;
 }
+
+
 
 function LinkModal({ onInsert, onClose }) {
   const [display, setDisplay]   = useState('');
@@ -105,8 +115,10 @@ function LinkModal({ onInsert, onClose }) {
                   {resolvedWiki ? `→ ${resolvedWiki}` : 'Unknown prefix — try w:en:, w:bn:, mw:, q:, wikt:, commons:'}
                 </div>
               )}
-              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                Supported: <code>w:</code> <code>w:bn:</code> <code>w:fr:</code> <code>mw:</code> <code>q:</code> <code>wikt:</code> <code>b:</code> <code>n:</code> <code>s:</code> <code>commons:</code>
+                            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.8 }}>
+                <b>Format:</b> <code>site:article</code> or <code>site:lang:article</code><br/>
+                <b>Sites:</b> <code>w</code> <code>q</code> <code>n</code> <code>s</code> <code>b</code> <code>v</code> <code>t</code> <code>mw</code> <code>meta</code> <code>commons</code> <code>wd</code><br/>
+                <b>Examples:</b> <code>w:Bangladesh</code> → en.wikipedia &nbsp;|&nbsp; <code>w:bn:বাংলাদেশ</code> → bn.wikipedia &nbsp;|&nbsp; <code>q:en:Aristotle</code> → en.wikiquote
               </div>
             </div>
           )}
@@ -248,8 +260,4 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style 
   );
 }
 
-<<<<<<< Updated upstream
 export default RichTextEditor;
-=======
-export default RichTextEditor;
->>>>>>> Stashed changes

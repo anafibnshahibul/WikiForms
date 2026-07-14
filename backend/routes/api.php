@@ -4,6 +4,25 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
+// Custom error code 677 — request from unauthorized external origin.
+// Browsers always send Origin on cross-origin requests; direct server calls won't have it.
+$origin  = request()->header('Origin', '');
+$referer = request()->header('Referer', '');
+$allowed = 'https://wikiforms.toolforge.org';
+$isBrowser = !empty($origin) || !empty($referer);
+
+if ($isBrowser) {
+    $originOk  = empty($origin)  || str_starts_with($origin,  $allowed);
+    $refererOk = empty($referer) || str_starts_with($referer, $allowed);
+    if (!$originOk || !$refererOk) {
+        return response()->json([
+            'status'  => 'error',
+            'code'    => 677,
+            'message' => 'Request blocked: unauthorized origin.',
+        ], 403);
+    }
+}
+
 // Reject requests not originating from the official domain.
 // Checks both Origin and Referer headers — spoofing both from a browser is not possible.
 // Note: curl/Postman can spoof these, but that is acceptable for a public web tool.
@@ -18,6 +37,40 @@ $isCLI = empty($origin) && empty($referer);
 
 if (!$isAllowed && !$isCLI) {
     abort(403, 'Requests from unauthorized origins are not allowed.');
+}
+
+// Resolves and verifies the authenticated username.
+// Accepts either a valid server session or a verified HMAC-signed token
+// sent in the X-WF-Token header. Plain X-WF-User header alone is rejected.
+function resolveUser(): string {
+    // 1. Server session is always trusted
+    $fromSession = session('wf_username', '');
+    if ($fromSession) return $fromSession;
+
+    // 2. Verify HMAC-signed token from frontend
+    $rawToken = request()->header('X-WF-Token', '');
+    if (!$rawToken) return '';
+
+    try {
+        $decoded = base64_decode($rawToken, strict: true);
+        if (!$decoded) return '';
+
+        $parts = explode('|', $decoded);
+        if (count($parts) !== 3) return '';
+
+        [$username, $ts, $signature] = $parts;
+
+        // Token must not be older than 24 hours
+        if (abs(time() - (int)$ts) > 86400) return '';
+
+        $payload       = $username . '|' . $ts;
+        $expectedSig   = hash_hmac('sha256', $payload, config('app.key'));
+        if (!hash_equals($expectedSig, $signature)) return '';
+
+        return $username;
+    } catch (\Throwable $e) {
+        return '';
+    }
 }
 
 Route::middleware('throttle:20,1')->group(function () {
@@ -45,6 +98,20 @@ Route::middleware('throttle:20,1')->group(function () {
             'result_timing'    => 'nullable|string',
         ]);
 
+        $sessionUser    = resolveUser();
+        $requestedOwner = $sessionUser ?: ($v['owner_username'] ?? 'Anonymous');
+        $existing       = DB::table('forms')->where('slug', $v['slug'])->first();
+
+        if ($existing) {
+            $collaborators = json_decode($existing->collaborators ?? '[]', true) ?? [];
+            $isOwner       = $existing->owner_username === $sessionUser;
+            $isCollab      = in_array($sessionUser, $collaborators);
+            if (!$sessionUser || (!$isOwner && !$isCollab)) {
+                return response()->json(['status' => 'error', 'message' => 'Forbidden: you do not own this form.'], 403);
+            }
+            $requestedOwner = $existing->owner_username;
+        }
+
         $encryptedQuestions = Crypt::encryptString(json_encode($v['questions']));
 
         DB::table('forms')->updateOrInsert(
@@ -55,7 +122,7 @@ Route::middleware('throttle:20,1')->group(function () {
                 'description'      => $v['description'] ?? '',
                 'cover_image'      => $v['cover_image'] ?? null,
                 'questions'        => $encryptedQuestions,
-                'owner_username'   => $v['owner_username'] ?? 'Anonymous',
+                'owner_username'   => $requestedOwner,
                 'timer_type'       => $v['timer_type'] ?? 'none',
                 'timer_duration'   => $v['timer_duration'] ?? 0,
                 'timer_start'      => $v['timer_start'] ?? null,
@@ -131,6 +198,15 @@ Route::middleware('throttle:20,1')->group(function () {
     Route::get('/get-responses/{slug}', function ($slug) {
         $form = DB::table('forms')->where('slug', $slug)->first();
         if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+
+        $requester     = resolveUser();
+        $collaborators = json_decode($form->collaborators ?? '[]', true) ?? [];
+        $isOwner       = $form->owner_username === $requester;
+        $isCollab      = in_array($requester, $collaborators);
+        if (!$requester || (!$isOwner && !$isCollab)) {
+            return response()->json(['status' => 'error', 'message' => 'Forbidden: login required.'], 403);
+        }
+
         $responses = DB::table('form_responses')
             ->where('form_slug', $slug)
             ->orderBy('created_at', 'desc')
@@ -144,6 +220,71 @@ Route::middleware('throttle:20,1')->group(function () {
     });
 
     Route::post('/grade-response', [\App\Http\Controllers\GradingController::class, 'gradeResponse']);
+    // One-time session initialization after OAuth popup closes.
+    // The popup passes a short-lived token; this endpoint validates it and
+    // sets wf_username in the main window's session.
+    Route::post('/auth/session-init', function (Request $request) {
+        $token = $request->input('session_token', '');
+        if (!$token) {
+            return response()->json(['status' => 'error', 'message' => 'No token.'], 400);
+        }
+        $username = cache()->get('wf_auth_token_' . $token);
+        if (!$username) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid or expired token.'], 403);
+        }
+        cache()->forget('wf_auth_token_' . $token);
+        session(['wf_username' => $username]);
+        return response()->json(['status' => 'success', 'username' => $username]);
+    });
+
+    // Returns the currently logged-in username from session (used to verify session is alive).
+    Route::get('/auth/me', function () {
+        $username = session('wf_username', null);
+        if (!$username) {
+            return response()->json(['status' => 'guest']);
+        }
+        return response()->json(['status' => 'success', 'username' => $username]);
+    });
+
+
+
+    // Returns all forms owned by or collaborated on by a given Wikipedia user,
+    // along with response counts — used by the My Forms dashboard.
+    Route::get('/my-forms/{username}', function ($username) {
+        $forms = DB::table('forms')
+            ->get()
+            ->filter(function ($form) use ($username) {
+                if ($form->owner_username === $username) return true;
+                $collabs = json_decode($form->collaborators ?? '[]', true);
+                return in_array($username, $collabs ?? []);
+            })
+            ->map(function ($form) {
+                $responseCount = DB::table('form_responses')
+                    ->where('form_slug', $form->slug)
+                    ->count();
+                $recentResponses = DB::table('form_responses')
+                    ->where('form_slug', $form->slug)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(30)
+                    ->pluck('created_at');
+                return [
+                    'slug'           => $form->slug,
+                    'title'          => $form->title,
+                    'content_type'   => $form->content_type,
+                    'owner_username' => $form->owner_username,
+                    'collaborators'  => json_decode($form->collaborators ?? '[]'),
+                    'timer_type'     => $form->timer_type ?? 'none',
+                    'response_count' => $responseCount,
+                    'recent_dates'   => $recentResponses,
+                    'created_at'     => $form->created_at,
+                    'updated_at'     => $form->updated_at,
+                ];
+            })
+            ->values();
+
+        return response()->json(['status' => 'success', 'forms' => $forms]);
+    });
+
 
 });
 
@@ -202,13 +343,17 @@ Route::get('/usr-lang', function () {
 
 // Logged-in Wikipedia user submits a translation for a key (creates or updates as draft).
 Route::post('/editor', function (Request $request) {
+    $sessionUser = resolveUser();
+    if (!$sessionUser) {
+        return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+    }
     $v = $request->validate([
         'lang_code'       => 'required|string|max:10',
         'lang_name'       => 'required|string|max:100',
         'translation_key' => 'required|string|max:100',
         'value'           => 'required|string',
-        'contributed_by'  => 'required|string|max:255',
     ]);
+    $v['contributed_by'] = $sessionUser;
 
     $exists = DB::table('translations')
         ->where('lang_code', $v['lang_code'])
@@ -238,11 +383,15 @@ Route::post('/editor', function (Request $request) {
 
 // Any logged-in Wikipedia user can publish a draft translation.
 Route::post('/publisher', function (Request $request) {
+    $sessionUser = resolveUser();
+    if (!$sessionUser) {
+        return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+    }
     $v = $request->validate([
         'lang_code'       => 'required|string|max:10',
         'translation_key' => 'required|string|max:100',
-        'published_by'    => 'required|string|max:255',
     ]);
+    $v['published_by'] = $sessionUser;
 
     $row = DB::table('translations')
         ->where('lang_code', $v['lang_code'])

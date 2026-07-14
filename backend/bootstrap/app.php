@@ -2,7 +2,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -11,15 +10,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // These routes are protected by session-cookie authentication (Auth::user())
-        // rather than CSRF tokens, since the frontend SPA does not currently fetch
-        // a CSRF token before calling them.
+        // Enable session on API routes so session('wf_username') works for auth checks.
+        $middleware->api(prepend: [
+            Illuminate\Session\Middleware\StartSession::class,
+        ]);
+        // All API routes use session-cookie auth rather than CSRF tokens.
         $middleware->validateCsrfTokens(except: [
-            'api/get-form-for-edit/*',
-            'api/add-collaborator',
-            'api/remove-collaborator',
+            'api/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
     })->create();

@@ -70,8 +70,12 @@ function Header({ wikiUser, onLogin, onLogout, lang, onChangeLanguage, T, transl
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{displayName}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{T('wiki_account')}</div>
                   </div>
+                  <a href="/my-forms"
+                    style={{ display: 'block', width: '100%', padding: '12px 16px', textDecoration: 'none', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', borderBottom: '1px solid var(--border-light)' }}>
+                    📋 My Forms
+                  </a>
                   <a href="/contribute"
-                    style={{ display: 'block', width: '100%', padding: '12px 16px', textDecoration: 'none', fontSize: '14px', color: '#3366cc', fontWeight: '600', borderBottom: '1px solid var(--border-light)' }}>
+                    style={{ display: 'block', width: '100%', padding: '12px 16px', textDecoration: 'none', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', borderBottom: '1px solid var(--border-light)' }}>
                     🌐 {T('contribute')}
                   </a>
                   <button onClick={() => { onLogout(); setShowMenu(false); }}

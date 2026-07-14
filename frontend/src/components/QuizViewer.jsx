@@ -1,3 +1,4 @@
+import { apiFetch } from '../api.js';
 import React, { useState, useEffect, useMemo } from 'react';
 
 function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
@@ -18,7 +19,6 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const [gradeResults, setGradeResults] = useState(null);
   const [score, setScore] = useState(null);
   const [fetchedQuestions, setFetchedQuestions] = useState(null);
-  const [autoEmail, setAutoEmail] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
 
   const isForm = remoteData?.contentType === 'form';
@@ -142,7 +142,8 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const loadResponses = async () => {
     setLoadingResponses(true);
     try {
-      const res = await fetch(`/api/get-responses/${slug}`);
+      const username = encodeURIComponent(wikiUser?.username || '');
+      const res = await apiFetch(`/api/get-responses/${slug}?username=${username}`);
       const data = await res.json();
       if (data.status === 'success') setResponses(data.responses);
     } catch (e) {}
@@ -169,7 +170,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     setGradeError(false);
     try {
       const items = gradable.map(q => ({ id: q.id, question: q.text, correctAnswer: q.correctAnswer, userAnswer: answers[q.id] || '' }));
-      const gr = await fetch('/api/grade-response', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questions: items }) });
+      const gr = await apiFetch('/api/grade-response', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questions: items }) });
       const data = await gr.json().catch(() => null);
       if (gr.ok && data?.status === 'success' && Array.isArray(data.results)) {
         setGradeResults(data.results);
@@ -194,8 +195,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     if (!validateSection()) return;
     try {
       const finalAnswers = { ...answers };
-      if (autoEmail) finalAnswers['__email__'] = autoEmail;
-      const res = await fetch('/api/save-response', {
+      const res = await apiFetch('/api/save-response', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ form_slug: slug, title: remoteData.title, type: remoteData.contentType || 'form', answers: finalAnswers }),
       });
@@ -226,7 +226,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     return (
       <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1px solid #d92d20' : '1px solid var(--border-light)', borderRadius: '10px', padding: '20px 24px', marginBottom: '10px' }}>
         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
-          {i + 1}. {field.text}{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
+          {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
         </label>
         {field.type === 'text' && <input type="text" placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
         {field.type === 'textarea' && <textarea rows={3} placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
@@ -431,13 +431,6 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
         ? <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>{T('no_questions')}</div>
         : section.fields.map((f, i) => renderField(f, i))
       }
-
-      {isLastSection && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 10, padding: '18px 24px', marginTop: 10 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>{T('email_label')}</label>
-          <input type="email" placeholder="email@example.com" value={autoEmail} onChange={e => setAutoEmail(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)' }} />
-        </div>
-      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 10 }}>
         {currentSection > 0 && <button className="wiki-btn-secondary" onClick={() => setCurrentSection(s => s - 1)} style={{ padding: '12px 28px' }}>{T('back')}</button>}

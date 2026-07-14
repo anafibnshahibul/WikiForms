@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import WelcomeScreen from './components/WelcomeScreen';
 const ContributeEditor = React.lazy(() => import('./components/ContributeEditor'));
+const MyFormsDashboard = React.lazy(() => import('./components/MyFormsDashboard'));
 import { loadLang } from './i18n';
 const FormBuilder = React.lazy(() => import('./components/FormBuilder'));
 import QuizViewer from './components/QuizViewer';
@@ -12,7 +13,7 @@ function App() {
   const [lang, setLang] = useState(() => localStorage.getItem('wf_lang') || 'en');
   const [translations, setTranslations] = useState({});
   const [langReady, setLangReady] = useState(true); // Always ready — FALLBACK keys load instantly
-  const [appStep, setAppStep] = useState('welcome');
+  const [appStep, setAppStep] = useState(() => window.location.pathname === '/create' ? 'builder' : 'welcome');
   const [contentType, setContentType] = useState('form');
   const [editSlug, setEditSlug] = useState(null);
   const [formTitle, setFormTitle] = useState('');
@@ -25,8 +26,10 @@ function App() {
   const [wikiUser, setWikiUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wf_user')) || null; } catch { return null; }
   });
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [isContributeMode, setIsContributeMode] = useState(false);
+  const _path = window.location.pathname;
+  const [isViewMode, setIsViewMode] = useState(() => _path.startsWith('/view/'));
+  const [isContributeMode, setIsContributeMode] = useState(() => _path === '/contribute');
+  const [isMyFormsMode, setIsMyFormsMode] = useState(() => _path === '/my-forms');
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remoteData, setRemoteData] = useState(null);
@@ -50,12 +53,9 @@ function App() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/contribute') {
-      setIsContributeMode(true);
-    } else if (path.startsWith('/view/')) {
-      setIsViewMode(true);
-      setLoading(true);
+    if (path.startsWith('/view/')) {
       const slug = path.replace('/view/', '');
+      setLoading(true);
       // Only metadata is fetched here. Questions stay server-side until the user actually starts the form.
       fetch(`/api/get-form/${slug}`)
         .then(res => { if (!res.ok) throw new Error('Not found'); return res.json(); })
@@ -72,11 +72,29 @@ function App() {
     return val;
   };
 
-  const applyLoginSuccess = (u) => {
-    const userData = { name: u.username, username: u.username, isAuthenticated: true };
+  const applyLoginSuccess = async (u) => {
+    const userData = {
+      name: u.username,
+      username: u.username,
+      isAuthenticated: true,
+      auth_token: u.auth_token || null,
+    };
     setWikiUser(userData);
+    localStorage.setItem('wf_user', JSON.stringify(userData));
     setStatusMessage(T('welcome_user', { name: u.username }) || `Welcome, ${u.username}!`);
     setTimeout(() => setStatusMessage(''), 3000);
+
+    // Initialize main window session using the one-time token from the popup
+    if (u.session_token) {
+      try {
+        await fetch('/api/auth/session-init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ session_token: u.session_token }),
+        });
+      } catch (e) {}
+    }
   };
 
   const handleWikipediaLogin = () => {
@@ -218,6 +236,7 @@ function App() {
   const showViewer = isViewMode && !isEditMode;
   const showBuilder = isEditMode || appStep === 'builder';
   const showContribute = isContributeMode && !isEditMode;
+  const showMyForms = isMyFormsMode && !isEditMode;
 
   return (
     <div className="wikiform-main-layout">
@@ -225,7 +244,11 @@ function App() {
         onLogout={handleLogout} lang={lang} onChangeLanguage={handleChangeLang}
         T={T} translations={translations} />
       <main style={{ flex: 1 }}>
-        {showContribute ? (
+        {showMyForms ? (
+          <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
+            <MyFormsDashboard T={T} wikiUser={wikiUser} onLogin={handleWikipediaLogin} onEditForm={handleEditForm} onSelectType={handleSelectType} />
+          </React.Suspense>
+        ) : showContribute ? (
           <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
             <ContributeEditor T={T} wikiUser={wikiUser} onLogin={handleWikipediaLogin} lang={lang} />
           </React.Suspense>

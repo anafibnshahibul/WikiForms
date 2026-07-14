@@ -1,3 +1,4 @@
+import { apiFetch } from '../api.js';
 import React, { useState, useEffect } from 'react';
 
 const LANG_NAMES = {
@@ -23,7 +24,7 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
 
   // Load available languages on mount
   useEffect(() => {
-    fetch('/api/usr-lang')
+    apiFetch('/api/usr-lang')
       .then(r => r.json())
       .then(d => { if (d.status === 'success') setLanguages(d.languages); })
       .catch(() => {});
@@ -35,7 +36,7 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
     setLoadingDrafts(true);
     setEdited({});
     setSaved({});
-    fetch(`/api/editor/${targetLang}`)
+    apiFetch(`/api/editor/${targetLang}`)
       .then(r => r.json())
       .then(d => {
         if (d.status === 'success') {
@@ -67,14 +68,13 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
     if (!value.trim()) return;
     setSaving(s => ({ ...s, [key]: true }));
     try {
-      const res = await fetch('/api/editor', {
+      const res = await apiFetch('/api/editor', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lang_code: targetLang,
           lang_name: languages.find(l => l.code === targetLang)?.name || newLangName || targetLang,
           translation_key: key,
           value,
-          contributed_by: wikiUser.username,
         }),
       });
       const data = await res.json();
@@ -90,9 +90,9 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
   const handlePublish = async (key) => {
     setPublishing(p => ({ ...p, [key]: true }));
     try {
-      const res = await fetch('/api/publisher', {
+      const res = await apiFetch('/api/publisher', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lang_code: targetLang, translation_key: key, published_by: wikiUser.username }),
+        body: JSON.stringify({ lang_code: targetLang, translation_key: key }),
       });
       const data = await res.json();
       if (data.status === 'success') {
@@ -295,8 +295,4 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
   );
 }
 
-<<<<<<< Updated upstream
 export default ContributeEditor;
-=======
-export default ContributeEditor;
->>>>>>> Stashed changes

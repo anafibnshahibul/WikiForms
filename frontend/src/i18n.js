@@ -23,6 +23,11 @@ const FALLBACK = {
 const _cache = {};
 let _current = { ...FALLBACK };
 
+// Use server-inlined EN translations if available — avoids first API call
+if (window.__WF_TRANSLATIONS_EN__) {
+  _cache['en'] = { ...FALLBACK, ...window.__WF_TRANSLATIONS_EN__ };
+}
+
 export async function loadLang(lang) {
   if (_cache[lang]) {
     _current = _cache[lang];
