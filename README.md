@@ -2,7 +2,7 @@
 
 > Open-source form and quiz builder for the Wikimedia ecosystem.
 
-[![License: GPL-3.0 license](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL-3.0 license](https://img.shields.io/badge/license-%20%20GNU%20GPLv3%20-green)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![Toolforge](https://img.shields.io/badge/Hosted%20on-Toolforge-green)](https://wikitech.wikimedia.org/wiki/Portal:Toolforge)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple)](https://php.net)
 [![React](https://img.shields.io/badge/React-18%2B-61dafb)](https://react.dev)
