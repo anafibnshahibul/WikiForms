@@ -1,4 +1,15 @@
 import { apiFetch } from '../api.js';
+
+// Fetches a Google Translate suggestion for the given text
+async function googleSuggest(text, targetLang) {
+  if (!text || !targetLang || targetLang === 'en') return null;
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    return data?.[0]?.map(x => x?.[0]).filter(Boolean).join('') || null;
+  } catch { return null; }
+}
 import React, { useState, useEffect } from 'react';
 
 const LANG_NAMES = {
@@ -19,6 +30,8 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
   const [saved, setSaved]             = useState({});
   const [publishing, setPublishing]   = useState({});
   const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const [suggestions, setSuggestions]     = useState({});
+  const [loadingSug,  setLoadingSug]      = useState({});
   const [filter, setFilter]           = useState('all');
   const [search, setSearch]           = useState('');
 
@@ -64,7 +77,7 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
   });
 
   const handleSave = async (key) => {
-    const value = edited[key] ?? drafts[key]?.value ?? '';
+    const value = edited[key] !== undefined ? edited[key] : (drafts[key]?.value ?? '');
     if (!value.trim()) return;
     setSaving(s => ({ ...s, [key]: true }));
     try {
@@ -80,6 +93,8 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
       const data = await res.json();
       if (data.status === 'success') {
         setDrafts(d => ({ ...d, [key]: { ...d[key], key, value, status: 'draft', contributed_by: wikiUser.username } }));
+        // Sync edited state so the textarea shows the saved value correctly
+        setEdited(ed => ({ ...ed, [key]: value }));
         setSaved(s => ({ ...s, [key]: 'saved' }));
         setTimeout(() => setSaved(s => ({ ...s, [key]: null })), 2000);
       }
@@ -229,7 +244,7 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
               {filteredKeys.map(key => {
                 const draft    = drafts[key];
                 const status   = draft?.status || 'missing';
-                const current  = edited[key] ?? draft?.value ?? '';
+                const current  = edited[key] !== undefined ? edited[key] : (draft?.value ?? '');
                 const statusColor = status === 'live' ? '#00af89' : status === 'draft' ? '#f59e0b' : '#d92d20';
                 const statusLabel = status === 'live' ? '✅ Live' : status === 'draft' ? '📝 Draft' : '❌ Missing';
                 const isDirty  = edited[key] !== undefined && edited[key] !== (draft?.value ?? '');
@@ -255,8 +270,32 @@ function ContributeEditor({ T, wikiUser, onLogin, lang }) {
                       value={current}
                       onChange={e => setEdited(ed => ({ ...ed, [key]: e.target.value }))}
                       placeholder={`Translate to ${languages.find(l => l.code === targetLang)?.name || targetLang}...`}
-                      style={{ ...inputStyle, resize: 'vertical', marginBottom: 8 }}
+                      style={{ ...inputStyle, resize: 'vertical', marginBottom: 6 }}
                     />
+                    {/* Google Translate suggestion */}
+                    <div style={{ marginBottom: 8 }}>
+                      <button
+                        onClick={async () => {
+                          setLoadingSug(s => ({ ...s, [key]: true }));
+                          const sug = await googleSuggest(sourceKeys[key], targetLang);
+                          setSuggestions(s => ({ ...s, [key]: sug }));
+                          setLoadingSug(s => ({ ...s, [key]: false }));
+                        }}
+                        style={{ fontSize: 11, padding: '3px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg)', cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+                        {loadingSug[key] ? '...' : '🌐 Google Suggest'}
+                      </button>
+                      {suggestions[key] && (
+                        <div style={{ marginTop: 6, background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>Google suggestion:</span>
+                          <span>{suggestions[key]}</span>
+                          <button
+                            onClick={() => setEdited(ed => ({ ...ed, [key]: suggestions[key] }))}
+                            style={{ marginLeft: 10, fontSize: 11, padding: '2px 8px', border: '1px solid #3366cc', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#3366cc', fontFamily: 'inherit' }}>
+                            Use this
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

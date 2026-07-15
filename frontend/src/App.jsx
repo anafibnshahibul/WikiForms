@@ -4,6 +4,9 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import WelcomeScreen from './components/WelcomeScreen';
 const ContributeEditor = React.lazy(() => import('./components/ContributeEditor'));
+const AboutPage     = React.lazy(() => import('./components/AboutPage'));
+const PrivacyPage   = React.lazy(() => import('./components/PrivacyPage'));
+const TermsPage     = React.lazy(() => import('./components/TermsPage'));
 const MyFormsDashboard = React.lazy(() => import('./components/MyFormsDashboard'));
 import { loadLang } from './i18n';
 const FormBuilder = React.lazy(() => import('./components/FormBuilder'));
@@ -30,6 +33,9 @@ function App() {
   const [isViewMode, setIsViewMode] = useState(() => _path.startsWith('/view/'));
   const [isContributeMode, setIsContributeMode] = useState(() => _path === '/contribute');
   const [isMyFormsMode, setIsMyFormsMode] = useState(() => _path === '/my-forms');
+  const [isAboutMode,   setIsAboutMode]   = useState(() => _path === '/about');
+  const [isPrivacyMode, setIsPrivacyMode] = useState(() => _path === '/privacy');
+  const [isTermsMode,   setIsTermsMode]   = useState(() => _path === '/terms');
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remoteData, setRemoteData] = useState(null);
@@ -236,7 +242,10 @@ function App() {
   const showViewer = isViewMode && !isEditMode;
   const showBuilder = isEditMode || appStep === 'builder';
   const showContribute = isContributeMode && !isEditMode;
-  const showMyForms = isMyFormsMode && !isEditMode;
+  const showMyForms  = isMyFormsMode  && !isEditMode;
+  const showAbout    = isAboutMode    && !isEditMode;
+  const showPrivacy  = isPrivacyMode  && !isEditMode;
+  const showTerms    = isTermsMode    && !isEditMode;
 
   return (
     <div className="wikiform-main-layout">
@@ -244,7 +253,19 @@ function App() {
         onLogout={handleLogout} lang={lang} onChangeLanguage={handleChangeLang}
         T={T} translations={translations} />
       <main style={{ flex: 1 }}>
-        {showMyForms ? (
+        {showAbout ? (
+          <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
+            <AboutPage T={T} lang={lang} />
+          </React.Suspense>
+        ) : showPrivacy ? (
+          <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
+            <PrivacyPage T={T} lang={lang} />
+          </React.Suspense>
+        ) : showTerms ? (
+          <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
+            <TermsPage T={T} lang={lang} />
+          </React.Suspense>
+        ) : showMyForms ? (
           <React.Suspense fallback={<div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>{T('loading')}</div>}>
             <MyFormsDashboard T={T} wikiUser={wikiUser} onLogin={handleWikipediaLogin} onEditForm={handleEditForm} onSelectType={handleSelectType} />
           </React.Suspense>

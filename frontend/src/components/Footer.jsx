@@ -7,11 +7,11 @@ function Footer({ lang, T }) {
 
         {/* Top row — links */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', justifyContent: 'center', lineHeight: 2 }}>
-          <a href="/privacy.html" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
           <span style={{ color: 'var(--border)' }}>•</span>
-          <a href="/terms.html" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Use</a>
+          <a href="/terms" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Use</a>
           <span style={{ color: 'var(--border)' }}>•</span>
-          <a href="/about.html" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>About</a>
+          <a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>About</a>
           <span style={{ color: 'var(--border)' }}>•</span>
           <a href="/docs.php" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>API Docs</a>
           <span style={{ color: 'var(--border)' }}>•</span>

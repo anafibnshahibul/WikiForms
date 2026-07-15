@@ -1,94 +1,57 @@
-# WikiForms 📝
+cat > ~/frontend/public/README_preview.md << 'EOF'
+# WikiForms
 
-WikiForms is an amazing, intuitive, and modern drag-and-drop form builder specially designed for the Wikimedia ecosystem. It allows users to build, view, and manage interactive components, forms, and quizzes effortlessly. Built as a monorepo, the application features a blazing-fast React frontend paired with a robust and secure Laravel backend.
+> Open-source form and quiz builder for the Wikimedia ecosystem.
 
-| Home Page | Drag-and-Drop Form Builder | Interactive Login Window |
-| :---: | :---: | :---: |
-| <img src="Screenshot 2026-07-07 19.15.51.png" width="100%" alt="WikiForms Builder Dashboard"> | <img src="Screenshot 2026-07-07 19.16.01.png" width="100%" alt="Interactive Quiz Interface - Step 1"> | <img src="Screenshot 2026-07-07 19.16.23.png" width="100%" alt="Interactive Quiz Interface - Step 2"> |
-| [See more](https://wikiforms.toolforge.org/) | [🏗️ Open Form Builder](https://wikiforms.toolforge.org/create) | [View Live](https://wikiforms.toolforge.org/) |
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Toolforge](https://img.shields.io/badge/Hosted%20on-Toolforge-green)](https://wikitech.wikimedia.org/wiki/Portal:Toolforge)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple)](https://php.net)
+[![React](https://img.shields.io/badge/React-18%2B-61dafb)](https://react.dev)
 
-
----
-
-## 🚀 Key Features
-
-* **Drag-and-Drop Form Builder:** Design custom forms seamlessly with an interactive building interface.
-* **Quiz Viewer Component:** Native support for viewing and participating in interactive quizzes and assessments.
-* **Modern UI/UX:** Styled beautifully using responsive layouts and the crisp Inter font family.
-* **Monorepo Architecture:** Frontend and backend codebases housed cleanly in dedicated, isolated directories.
-* **SEO & Analytics Ready:** Shipped with out-of-the-box configurations for web crawlers, open-search capabilities, and security metadata.
-* **Dockerized Setup:** Local development environments fully standardized using multi-container orchestrations.
+**Live:** https://wikiforms.toolforge.org  
+**Repo:** https://github.com/anafibnshahibul/WikiForms  
+**Docs:** https://wikiforms.toolforge.org/docs.php
 
 ---
 
-## 🛠 Tech Stack
+## What is WikiForms?
 
-### Frontend
-* **Core:** React 18+ (Vite)
-* **Internationalization:** i18n localization engine for global language support.
-* **Styling & Assets:** Scalable Vector Graphics (SVG), custom icon mappings, and embedded typography fonts.
+WikiForms lets Wikipedia editors, researchers, and community members create forms and quizzes without leaving the Wikimedia ecosystem — and without sharing data with third-party corporations like Google.
 
-### Backend
-* **Core:** Laravel 10+ / 11 (PHP 8.2+)
-* **Architecture:** Traditional MVC setup serving APIs directly to the frontend.
-
-### Infrastructure & Database
-* **Database:** MySQL 8.0
-* **Containerization:** Docker & Docker Compose
+Log in with your Wikipedia account. No separate sign-up needed.
 
 ---
 
-## 🐋 Local Docker Setup Guide
+## Features
 
-Follow these steps to spin up the local development environment using Docker:
+| Feature | Description |
+|---------|-------------|
+| 🔐 Wikipedia Login | MediaWiki OAuth 2.0 — no password stored |
+| 📋 Form Builder | Drag-and-drop, multiple question types |
+| 🧠 Quiz Mode | Points, correct answers, scheduled start/end |
+| 🔒 Encrypted Storage | AES-256-CBC for form questions |
+| 🌐 Multilingual | EN, BN, ES, FR + community contributions |
+| 👥 Collaborators | Share edit access with other Wikipedia users |
+| 🔗 Wiki Links | Rich text with interwiki link support |
+| 🛡 Anti-Cheat | Tab-switch detection for quizzes |
 
-### Prerequisites
-Make sure you have the following installed on your machine:
-* Docker Desktop (or Engine)
-* Docker Compose V2
+---
 
-### 1. File Infrastructure
-Ensure you have created the configuration files (`Dockerfile` inside `frontend/`, `Dockerfile` inside `backend/`, and `docker-compose.yml` in the root) as mapped out by your project generation wizard.
+## Tech Stack
 
-### 2. Launching Containers
-Open your terminal at the root folder of the project and execute the build command:
-```bash
-docker compose up -d --build
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + Vite |
+| Backend | Laravel 11 (PHP 8.2+) |
+| Database | MySQL/MariaDB (Toolforge) |
+| Auth | MediaWiki OAuth 2.0 |
+| Hosting | Wikimedia Toolforge |
+
+---
+
+## Project Structure
+
 ```
-*This command runs the processes in detached mode (`-d`), downloading and packaging the React, Laravel, and MySQL networks simultaneously.*
-
-### 3. Running Backend Services
-Once the containers are successfully online, execute your asset compilation, application key generation, and database scaffolding:
-```bash
-# Generate the application encryption key
-docker compose exec backend php artisan key:generate
-
-# Build database structures and run schemas
-docker compose exec backend php artisan migrate
-```
-
-### 4. Port Configuration Mappings
-Once fully initialized, your services will be bound to the following network ports locally:
-
-| Service | Technology | Access Link |
-| :--- | :--- | :--- |
-| **Frontend** | React (Vite) | `http://localhost:5173` |
-| **Backend** | Laravel (Artisan) | `http://localhost:8000` |
-| **Database** | MySQL Server | `localhost:3306` |
-
----
-
-## 🔒 Security & Optimization Best Practices
-
-* **System Policies:** Cross-domain access rules and structural XML metadata are kept natively inside the public static layer to support Wikimedia security-report protocols.
-* **State Syncing:** Hot module reloading (HMR) maps code updates in your terminal to your container instances dynamically during active coding sessions.
-
----
-
-## 📂 System Overview (Core Structure)
-
-The system isolates public assets from primary application logic:
-```text
 ├── docker-compose.yml
 ├── LICENSE
 ├── jobs.yaml
@@ -125,17 +88,22 @@ The system isolates public assets from primary application logic:
 │   │   ├── security-report.xsl
 │   │   ├── sitemap.xml
 │   │   └── style.xsl
-│   ├── src
-│   │   ├── App.css
-│   │   ├── App.jsx
-│   │   ├── components
-│   │   │   ├── Footer.jsx
+│   ├── src/
+│   │   ├── components/
 │   │   │   ├── FormBuilder.jsx
-│   │   │   ├── Header.jsx
-│   │   │   ├── RichTextEditor.jsx
 │   │   │   ├── QuizViewer.jsx
-│   │   │   └── WelcomeScreen.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   ├── WelcomeScreen.jsx
+│   │   │   ├── ContributeEditor.jsx
+│   │   │   ├── MyFormsDashboard.jsx
+│   │   │   ├── AboutPage.jsx
+│   │   │   ├── PrivacyPage.jsx
+│   │   │   ├── TermsPage.jsx
+│   │   │   └── RichTextEditor.jsx
+│   │   ├── App.jsx
 │   │   ├── i18n.js
+│   │   └── api.js
 │   │   ├── index.css
 │   │   └── main.jsx
 │   └── vite.config.js
@@ -226,9 +194,87 @@ The system isolates public assets from primary application logic:
 │   │       └── ExampleTest.php
 │   └── vite.config.js
 ```
+---
+
+## API
+
+Base URL: `https://wikiforms.toolforge.org/api`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/test-connection` | Health check |
+| GET | `/auth/mediawiki` | Start OAuth login |
+| POST | `/save-form` | Create/update form |
+| GET | `/get-form/{slug}` | Get form metadata |
+| POST | `/get-form-questions/{slug}` | Get encrypted questions |
+| POST | `/save-response` | Submit form response |
+| GET | `/get-responses/{slug}` | Get responses (owner only) |
+| POST | `/grade-response` | AI grading via OpenRouter |
+| GET | `/usr-lang/{lang}` | Get translations |
+| POST | `/editor` | Save draft translation |
+| POST | `/publisher` | Publish translation |
+| GET | `/my-forms/{username}` | Get user's forms |
+
+Full docs: https://wikiforms.toolforge.org/docs.php
 
 ---
 
-## 📄 License
+## Local Development
 
-This repository is officially open-sourced. For full details regarding reproduction, rights, and usage permissions, please read our dedicated [LICENSE](https://github.com/anafibnshahibul/WikiForms?tab=License-1-ov-file) page.
+```bash
+git clone https://github.com/anafibnshahibul/WikiForms.git
+cd WikiForms
+
+# Backend
+cd backend
+cp .env.example .env
+composer install
+php artisan key:generate
+php artisan migrate
+
+# Frontend
+cd ../frontend
+npm install
+npm run dev
+```
+
+Or with Docker:
+
+```bash
+docker compose up -d --build
+docker compose exec backend php artisan migrate
+```
+
+---
+
+## Contributing
+
+Contributions are welcome!
+
+- **Code:** Open a PR on GitHub
+- **Translations:** Visit https://wikiforms.toolforge.org/contribute (Wikipedia account required)
+- **Bugs:** https://github.com/anafibnshahibul/WikiForms/issues
+- **Security:** Contact via [Wikipedia talk page](https://en.wikipedia.org/wiki/User_talk:Anaf_Ibn_Shahibul)
+
+---
+
+## Privacy & Compliance
+
+- No PII collected
+- No tracking or ads
+- Compliant with [Toolforge Terms of Use](https://wikitech.wikimedia.org/wiki/Wikitech:Cloud_Services_Terms_of_use)
+- Full [Privacy Policy](https://wikiforms.toolforge.org/privacy)
+
+---
+
+## License
+
+- **Code:** [GPL-3.0 license](LICENSE)
+- **Documentation:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+Not affiliated with or endorsed by the Wikimedia Foundation.
+
+---
+
+*Developed with ❤️ by [Anaf Ibn Shahibul](https://en.wikipedia.org/wiki/User:Anaf_Ibn_Shahibul)*
+EOF
