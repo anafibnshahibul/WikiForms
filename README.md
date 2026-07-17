@@ -2,9 +2,25 @@
 
 > Open-source form and quiz builder for the Wikimedia ecosystem.
 
+<table width="100%">
+  <tr>
+    <td width="33.3%" align="center">
+      <img src="Screenshots/Screenshot 2026-07-07 19.15.51.png" alt="Screenshot 1" width="100%" style="border-radius: 8px;" />
+    </td>
+    <td width="33.3%" align="center">
+      <img src="Screenshots/Screenshot 2026-07-07 19.16.01.png" alt="Screenshot 2" width="100%" style="border-radius: 8px;" />
+    </td>
+    <td width="33.3%" align="center">
+      <img src="Screenshots/Screenshot 2026-07-07 19.16.23.png" alt="Screenshot 3" width="100%" style="border-radius: 8px;" />
+    </td>
+  </tr>
+</table>
+
 [![License: GPL-3.0 license](https://img.shields.io/badge/license-%20%20GNU%20GPLv3%20-green)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![Toolforge](https://img.shields.io/badge/Hosted%20on-Toolforge-green)](https://wikitech.wikimedia.org/wiki/Portal:Toolforge)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple)](https://php.net)
+[![npm](https://img.shields.io/npm/v/github-buttons)](https://www.npmjs.com/github-buttons)
+[![Wikipedia](https://img.shields.io/badge/Wikipedia-000?logo=wikipedia&logoColor=fff&style=flat)](https://wikipedia.org)
 [![React](https://img.shields.io/badge/React-18%2B-61dafb)](https://react.dev)
 
 **Live:** https://wikiforms.toolforge.org  
