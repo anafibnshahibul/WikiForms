@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import Icon from './Icon.jsx';
 
 // Supported Wikipedia interwiki prefixes
 // Maps first parameter to base domain
@@ -75,7 +76,7 @@ function LinkModal({ onInsert, onClose }) {
     onInsert(display.trim(), finalUrl);
   };
 
-  const base = { width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit', boxSizing: 'border-box' };
+  const base = { width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 2, fontSize: 13, background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit', boxSizing: 'border-box' };
   const tabBtn = (t) => ({
     padding: '6px 14px', border: 'none', borderBottom: tab === t ? '2px solid #3366cc' : '2px solid transparent',
     background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
@@ -85,7 +86,7 @@ function LinkModal({ onInsert, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 24, width: 380, boxShadow: 'var(--shadow-lg)' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 2, padding: 24, width: 380, boxShadow: 'var(--shadow-lg)' }}>
         <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Insert Link</h3>
 
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', marginBottom: 16 }}>
@@ -125,11 +126,11 @@ function LinkModal({ onInsert, onClose }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 6, background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 2, background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>Cancel</button>
           <button
             onClick={handleInsert}
             disabled={!display.trim() || (tab === 'url' ? !url.trim() : !resolvedWiki)}
-            style={{ padding: '8px 16px', border: 'none', borderRadius: 6, background: '#3366cc', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!display.trim() || (tab === 'url' ? !url.trim() : !resolvedWiki)) ? 0.5 : 1 }}>
+            style={{ padding: '8px 16px', border: 'none', borderRadius: 2, background: '#3366cc', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!display.trim() || (tab === 'url' ? !url.trim() : !resolvedWiki)) ? 0.5 : 1 }}>
             Insert
           </button>
         </div>
@@ -207,7 +208,7 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style 
       type="button"
       title={title}
       onMouseDown={e => { e.preventDefault(); onClick(); }}
-      style={{ padding: '4px 8px', border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--bg)', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'inherit', lineHeight: 1.4 }}>
+      style={{ padding: '4px 8px', border: '1px solid var(--border-light)', borderRadius: 2, background: 'var(--bg)', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'inherit', lineHeight: 1.4 }}>
       {content}
     </button>
   );
@@ -220,14 +221,14 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style 
           onClose={() => setShowLink(false)}
         />
       )}
-      <div style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', ...style }}>
+      <div style={{ border: '1px solid var(--border)', borderRadius: 2, overflow: 'hidden', ...style }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg)', flexWrap: 'wrap' }}>
           {toolbarBtn(() => exec('bold'),      'Bold (Ctrl+B)',      <b>B</b>)}
           {toolbarBtn(() => exec('italic'),    'Italic (Ctrl+I)',    <i>I</i>)}
           {toolbarBtn(() => exec('underline'), 'Underline (Ctrl+U)', <u>U</u>)}
           <div style={{ width: 1, background: 'var(--border-light)', margin: '0 2px' }} />
-          {toolbarBtn(() => { saveSelection(); setShowLink(true); }, 'Link (Ctrl+K)', '🔗')}
+          {toolbarBtn(() => { saveSelection(); setShowLink(true); }, 'Link (Ctrl+K)', <Icon name='link' size={13}/>)}
           <div style={{ width: 1, background: 'var(--border-light)', margin: '0 2px' }} />
           {toolbarBtn(() => exec('removeFormat'), 'Clear formatting', '✕')}
         </div>

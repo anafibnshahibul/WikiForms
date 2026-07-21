@@ -109,3 +109,155 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Wikimedia Codex design tokens — mapped to our CSS variables */
+:root {
+  /* Codex color palette */
+  --color-progressive:          #3366cc;
+  --color-progressive--hover:   #2a4b8d;
+  --color-progressive--active:  #2a4b8d;
+  --color-destructive:          #d92d20;
+  --color-destructive--hover:   #b32424;
+  --color-success:              #00af89;
+  --color-warning:              #f59e0b;
+  --color-notice:               #54595d;
+
+  /* Codex base colors */
+  --color-base:                 #202122;
+  --color-base--subtle:        #54595d;
+  --color-base--disabled:      #72777d;
+  --color-placeholder:         #72777d;
+  --color-inverted:            #fff;
+
+  /* Codex background */
+  --background-color-base:           #fff;
+  --background-color-interactive:    #f8f9fa;
+  --background-color-interactive--hover: #eaf3ff;
+
+  /* Codex border */
+  --border-color-base:          #a2a9b1;
+  --border-color-progressive:   #3366cc;
+  --border-color-destructive:   #d92d20;
+  --border-radius-base:         2px;
+  --border-radius-sharp:        0;
+
+  /* Codex spacing */
+  --spacing-12:  8px;
+  --spacing-25:  16px;
+  --spacing-50:  32px;
+  --spacing-100: 64px;
+
+  /* Codex font */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Lato, Helvetica, Arial, sans-serif;
+  --font-size-x-small:  0.75rem;
+  --font-size-small:    0.875rem;
+  --font-size-medium:   1rem;
+  --font-size-large:    1.125rem;
+  --font-weight-normal: 400;
+  --font-weight-semi-bold: 600;
+  --font-weight-bold:   700;
+
+  /* Map Codex tokens to our existing variables */
+  --wiki-blue:      var(--color-progressive);
+  --wiki-green:     var(--color-success);
+  --text-primary:   var(--color-base);
+  --text-secondary: var(--color-base--subtle);
+  --text-muted:     var(--color-base--disabled);
+  --border:         var(--border-color-base);
+}
+
+/* Codex button base styles */
+.cdx-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-semi-bold);
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.1s, border-color 0.1s;
+  border: 1px solid transparent;
+}
+
+.cdx-button--action-progressive {
+  background-color: var(--color-progressive);
+  color: var(--color-inverted);
+  border-color: var(--color-progressive);
+}
+
+.cdx-button--action-progressive:hover {
+  background-color: var(--color-progressive--hover);
+  border-color: var(--color-progressive--hover);
+}
+
+.cdx-button--action-destructive {
+  background-color: var(--color-destructive);
+  color: var(--color-inverted);
+  border-color: var(--color-destructive);
+}
+
+.cdx-button--weight-normal {
+  background-color: var(--background-color-interactive);
+  color: var(--color-base);
+  border-color: var(--border-color-base);
+}
+
+.cdx-button--weight-normal:hover {
+  background-color: var(--background-color-interactive--hover);
+  border-color: var(--color-progressive);
+  color: var(--color-progressive);
+}
+
+/* Codex text input */
+.cdx-text-input__input {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-medium);
+  padding: 6px 8px;
+  border: 1px solid var(--border-color-base);
+  border-radius: var(--border-radius-base);
+  color: var(--color-base);
+  background-color: var(--background-color-base);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cdx-text-input__input:focus {
+  border-color: var(--color-progressive);
+  outline: 1px solid var(--color-progressive);
+}
+
+/* Codex card */
+.cdx-card {
+  background: var(--background-color-base);
+  border: 1px solid var(--border-color-base);
+  border-radius: var(--border-radius-base);
+  padding: var(--spacing-25);
+}
+
+/* Remove overused border-radius on wiki-btn to match Codex */
+.wiki-btn {
+  border-radius: var(--border-radius-base) !important;
+}
+
+.wiki-btn-secondary {
+  border-radius: var(--border-radius-base) !important;
+}
+
+/* Codex border-radius override — remove squircles globally */
+.wiki-card,
+.wiki-btn,
+.wiki-btn-secondary,
+.wikiform-container > div,
+[style*="border-radius: 10px"],
+[style*="border-radius: 12px"],
+[style*="border-radius: 8px"] {
+  border-radius: 2px !important;
+}
+
+input, textarea, select, button {
+  border-radius: 2px !important;
+}

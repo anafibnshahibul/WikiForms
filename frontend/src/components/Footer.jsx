@@ -25,15 +25,15 @@ function Footer({ lang, T }) {
           <p style={{ margin: 0, textAlign: 'center', flex: 1 }}>
             Available under{' '}
             <a href="https://creativecommons.org/licenses/by-sa/4.0/" style={{ color: '#3366cc' }}>CC BY-SA 4.0</a>
-            {' '}(docs) · MIT License (code) · Hosted on{' '}
+            {' '}(docs) · GPL-3.0 license(code) · Hosted on{' '}
             <a href="https://wikitech.wikimedia.org/wiki/Portal:Toolforge" style={{ color: '#3366cc' }}>Wikimedia Toolforge</a>
           </p>
-          <a href="https://mediawiki.org" target="_blank" rel="noopener noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg)', textDecoration: 'none', flexShrink: 0 }}>
-            <img src="https://commons.wikimedia.org/w/resources/assets/mediawiki_compact.svg" alt="MediaWiki" width="22" height="22" style={{ display: 'block' }} />
+          <a href="https://wikimediafoundation.org" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '2px', backgroundColor: 'var(--bg)', textDecoration: 'none', flexShrink: 0 }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/Wikimedia-logo.svg" alt="Wikimedia" width="22" height="22" style={{ display: 'block' }} />
             <span style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.3', whiteSpace: 'nowrap' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Powered by</span>
-              MediaWiki
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Powered By</span>
+              Wikimedia
             </span>
           </a>
         </div>

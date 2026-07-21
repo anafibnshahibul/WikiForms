@@ -9,6 +9,7 @@ const PrivacyPage   = React.lazy(() => import('./components/PrivacyPage'));
 const TermsPage     = React.lazy(() => import('./components/TermsPage'));
 const MyFormsDashboard = React.lazy(() => import('./components/MyFormsDashboard'));
 import { loadLang } from './i18n';
+import { apiFetch } from './api.js';
 const FormBuilder = React.lazy(() => import('./components/FormBuilder'));
 import QuizViewer from './components/QuizViewer';
 
@@ -93,7 +94,7 @@ function App() {
     // Initialize main window session using the one-time token from the popup
     if (u.session_token) {
       try {
-        await fetch('/api/auth/session-init', {
+        await apiFetch('/api/auth/session-init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -159,7 +160,7 @@ function App() {
 
   const handleEditForm = async (slug) => {
     try {
-      const res = await fetch(`/api/get-form-for-edit/${slug}`, {
+      const res = await apiFetch(`/api/get-form-for-edit/${slug}`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -195,7 +196,7 @@ function App() {
     const finalSlug = customSlug.trim().replace(/\s+/g, '-') || generateSecureSlug();
     try {
       setStatusMessage(T('saving'));
-      const res = await fetch('/api/save-form', {
+      const res = await apiFetch('/api/save-form', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug: finalSlug, contentType, title: formTitle, description,
@@ -246,6 +247,7 @@ function App() {
   const showAbout    = isAboutMode    && !isEditMode;
   const showPrivacy  = isPrivacyMode  && !isEditMode;
   const showTerms    = isTermsMode    && !isEditMode;
+  const showNotFound = !showViewer && !showBuilder && !showContribute && !showMyForms && !showAbout && !showPrivacy && !showTerms && _path !== "/";
 
   return (
     <div className="wikiform-main-layout">
@@ -293,6 +295,17 @@ function App() {
               wikiUser={wikiUser} onLogin={handleWikipediaLogin}
             />
           </React.Suspense>
+        ) : showNotFound ? (
+          <div className="wikiform-container" style={{ marginTop: 80, textAlign: 'center', padding: '40px 20px' }}>
+            <h1 style={{ fontSize: '3.5rem', marginBottom: '10px', color: 'var(--text-primary)' }}>404</h1>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '16px' }}>
+              {T('page_not_found') || 'Page not found'}
+            </p>
+            <a href="/" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/'); window.location.reload(); }} 
+               style={{ padding: '8px 16px', border: '1px solid var(--border)', color: 'var(--text-primary)', textDecoration: 'none', borderRadius: '6px', backgroundColor: 'var(--bg)', display: 'inline-block', fontSize: '14px' }}>
+              {T('back_home') || 'Back to Home'}
+            </a>
+          </div>
         ) : (
           <WelcomeScreen T={T} onSelectType={handleSelectType} lang={lang} />
         )}

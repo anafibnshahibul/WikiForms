@@ -1,5 +1,6 @@
 import { apiFetch } from '../api.js';
 import React, { useState, useEffect, useMemo } from 'react';
+import Icon from './Icon.jsx';
 
 function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const [warnings, setWarnings] = useState(0);
@@ -222,9 +223,9 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const renderField = (field, i) => {
     const hasError = validationErrors[field.id];
     const border = hasError ? '1px solid #d92d20' : '1px solid var(--border)';
-    const base = { width: '100%', padding: '10px 12px', border, borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit' };
+    const base = { width: '100%', padding: '10px 12px', border, borderRadius: '2px', fontSize: '14px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit' };
     return (
-      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1px solid #d92d20' : '1px solid var(--border-light)', borderRadius: '10px', padding: '20px 24px', marginBottom: '10px' }}>
+      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1px solid #d92d20' : '1px solid var(--border-light)', borderRadius: '2px', padding: '20px 24px', marginBottom: '10px' }}>
         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
           {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
         </label>
@@ -285,16 +286,16 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       const color = pct >= 80 ? '#00af89' : pct >= 50 ? '#f59e0b' : '#d92d20';
       return (
         <div className="wikiform-container" style={{ marginTop: 24, paddingBottom: 60 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${color}`, borderRadius: '12px', padding: '32px', textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${color}`, borderRadius: '2px', padding: '32px', textAlign: 'center', marginBottom: 20 }}>
             <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: 22 }}>{remoteData?.title}</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 24px' }}>{T('your_result')}</p>
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', border: `2px solid ${color}`, borderRadius: '16px', padding: '24px 48px', marginBottom: 24 }}>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', border: `2px solid ${color}`, borderRadius: '2px', padding: '24px 48px', marginBottom: 24 }}>
               <span style={{ fontSize: 48, fontWeight: 900, color, lineHeight: 1 }}>{score.earned}</span>
               <span style={{ fontSize: 16, color: 'var(--text-muted)', margin: '4px 0' }}>/ {score.total}</span>
               <span style={{ fontSize: 28, fontWeight: 800, color }}>{pct}%</span>
             </div>
-            <div style={{ width: '100%', background: 'var(--border-light)', borderRadius: 8, height: 10, maxWidth: 320, margin: '0 auto 8px' }}>
-              <div style={{ width: `${pct}%`, background: color, borderRadius: 8, height: '100%', transition: 'width 0.8s ease' }} />
+            <div style={{ width: '100%', background: 'var(--border-light)', borderRadius: 2, height: 10, maxWidth: 320, margin: '0 auto 8px' }}>
+              <div style={{ width: `${pct}%`, background: color, borderRadius: 2, height: '100%', transition: 'width 0.8s ease' }} />
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
               {pct >= 80 ? T('excellent') : pct >= 50 ? T('good_job') : T('keep_practicing')}
@@ -309,11 +310,11 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
                 const isCorrect = ua !== '' && result?.correct;
                 const feedback = isCorrect ? q.successMsg : q.failMsg;
                 return (
-                  <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: `4px solid ${isCorrect ? '#00af89' : '#d92d20'}`, borderRadius: '10px', padding: '16px 20px' }}>
+                  <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: `4px solid ${isCorrect ? '#00af89' : '#d92d20'}`, borderRadius: '2px', padding: '16px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }}>{q.text}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: isCorrect ? '#00af8918' : '#d92d2018', color: isCorrect ? '#00af89' : '#d92d20', whiteSpace: 'nowrap' }}>
-                        {isCorrect ? '✓ ' + T('correct') : '✗ ' + T('incorrect')}
+                      <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 2, background: isCorrect ? '#00af8918' : '#d92d2018', color: isCorrect ? '#00af89' : '#d92d20', whiteSpace: 'nowrap' }}>
+                        {isCorrect ? <><Icon name='check' size={11} color='#00af89' style={{marginRight:3}}/>{T('correct')}</> : <><Icon name='x' size={11} color='#d92d20' style={{marginRight:3}}/>{T('incorrect')}</>}
                       </span>
                     </div>
                     {ua && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 0' }}>{T('your_answer_label')}<strong style={{ color: 'var(--text-secondary)' }}>{ua}</strong></p>}
@@ -334,7 +335,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     return (
       <div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>
         <div className="wiki-card" style={{ padding: '52px 32px', borderTop: '4px solid #00af89' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
+          <div style={{ marginBottom: 12 }}><Icon name='check' size={48} color='#00af89' strokeWidth={1.5}/></div>
           <h2 style={{ color: '#00af89', margin: '0 0 8px', fontSize: 24 }}>{T('thank_you')}</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 32, fontSize: 15 }}>{T('response_recorded')}</p>
           {grading && <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>{T('grading')}</p>}
@@ -364,11 +365,11 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   if (!isStarted) return (
     <div className="wikiform-container" style={{ marginTop: 32 }}>
       <div className="wiki-card" style={{ borderTop: `4px solid ${accent}`, padding: '36px 32px', textAlign: 'center', position: 'relative' }}>
-        {canEdit && <button onClick={() => onEditForm(slug)} style={{ position: 'absolute', top: 16, right: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}><PencilIcon />{T('edit')}</button>}
-        {coverImageUrl && <img src={coverImageUrl} alt="Cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8, marginBottom: 20 }} onError={e => { e.target.style.display = 'none'; }} />}
+        {canEdit && <button onClick={() => onEditForm(slug)} style={{ position: 'absolute', top: 16, right: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '7px 14px', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}><PencilIcon />{T('edit')}</button>}
+        {coverImageUrl && <img src={coverImageUrl} alt="Cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 2, marginBottom: 20 }} onError={e => { e.target.style.display = 'none'; }} />}
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>{remoteData?.title}</h1>
         {remoteData?.description && <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 15, lineHeight: 1.6 }}>{remoteData.description}</p>}
-        {!isForm && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
+        {!isForm && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 2, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
         <div>
           {!fetchedQuestions
             ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('preparing')}</p>
@@ -378,7 +379,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       </div>
 
       {canEdit && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 8, marginTop: 16, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 2, marginTop: 16, overflow: 'hidden' }}>
           <div onClick={() => { setShowResponses(p => !p); if (!showResponses) loadResponses(); }} style={{ padding: '14px 20px', background: 'var(--bg)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{T('responses')}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ transform: showResponses ? 'rotate(180deg)' : 'none', transition: '0.2s' }}><path d="m6 9 6 6 6-6"/></svg>
@@ -390,7 +391,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
                 : responses.length === 0
                   ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('no_responses')}</p>
                   : responses.map((r, i) => (
-                    <div key={r.id} style={{ border: '1px solid var(--border-light)', borderRadius: 8, padding: '14px 16px', marginBottom: 10 }}>
+                    <div key={r.id} style={{ border: '1px solid var(--border-light)', borderRadius: 2, padding: '14px 16px', marginBottom: 10 }}>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>#{i + 1} — {r.timestamp}</div>
                       {Object.entries(r.answers).filter(([k]) => k !== '__email__').map(([q, a], idx) => (
                         <div key={idx} style={{ marginBottom: 6, fontSize: 14 }}>
@@ -410,14 +411,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   // ===== QUIZ/FORM PAGE =====
   return (
     <div className="wikiform-container" style={{ marginTop: 24, paddingBottom: 80 }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: 10, padding: '20px 28px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: 2, padding: '20px 28px', marginBottom: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{remoteData.title}</h1>
             {remoteData.description && <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: 0 }}>{remoteData.description}</p>}
           </div>
           {timeLeft !== null && (
-            <div style={{ background: timeLeft < 60 ? '#fff0f0' : 'var(--bg)', border: `1px solid ${timeLeft < 60 ? '#d92d20' : 'var(--border)'}`, borderRadius: 8, padding: '8px 18px', textAlign: 'center' }}>
+            <div style={{ background: timeLeft < 60 ? '#fff0f0' : 'var(--bg)', border: `1px solid ${timeLeft < 60 ? '#d92d20' : 'var(--border)'}`, borderRadius: 2, padding: '8px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{T('time_left')}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: timeLeft < 60 ? '#d92d20' : 'var(--text-primary)', fontFamily: 'monospace' }}>{formatTime(timeLeft)}</div>
             </div>

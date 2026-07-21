@@ -18,7 +18,7 @@ const FIELD_TYPES = [
 ];
 
 const Toggle = ({ checked, onChange }) => (
-  <div onClick={() => onChange(!checked)} style={{ width: '40px', height: '22px', borderRadius: '11px', background: checked ? '#3366cc' : '#d0d5dd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+  <div onClick={() => onChange(!checked)} style={{ width: '40px', height: '22px', borderRadius: '2px', background: checked ? '#3366cc' : '#d0d5dd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: checked ? '20px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
   </div>
 );
@@ -29,7 +29,7 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
 
   if (field.type === 'section') {
     return (
-      <div ref={setNodeRef} style={{ ...style, background: 'var(--bg)', border: '2px dashed var(--border)', borderRadius: '8px', padding: '16px 20px', marginBottom: '10px' }}>
+      <div ref={setNodeRef} style={{ ...style, background: 'var(--bg)', border: '2px dashed var(--border)', borderRadius: '2px', padding: '16px 20px', marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--text-muted)', touchAction: 'none' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="7" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="17" r="1.5"/><circle cx="15" cy="7" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="17" r="1.5"/></svg>
@@ -39,7 +39,7 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
             <input type="text" placeholder="Section title..." value={field.text} onChange={e => updateField(field.id, 'text', e.target.value)} style={{ ...inputStyle, fontWeight: '700', fontSize: '16px' }} />
             <input type="text" placeholder="Description (optional)..." value={field.description || ''} onChange={e => updateField(field.id, 'description', e.target.value)} style={{ ...inputStyle, fontSize: '13px', marginTop: '6px' }} />
           </div>
-          <button onClick={() => deleteField(field.id)} style={{ border: '1px solid #fecdca', background: 'var(--surface)', cursor: 'pointer', padding: '5px 8px', borderRadius: '5px', color: '#d92d20' }}>
+          <button onClick={() => deleteField(field.id)} style={{ border: '1px solid #fecdca', background: 'var(--surface)', cursor: 'pointer', padding: '5px 8px', borderRadius: '2px', color: '#d92d20' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
@@ -50,9 +50,9 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
   const isSelected = selectedId === field.id;
 
   return (
-    <div ref={setNodeRef} style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '8px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none' }}
+    <div ref={setNodeRef} style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '2px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none' }}
       {...attributes} {...listeners}
-      style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '8px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none', cursor: 'grab', touchAction: 'none' }}
+      style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '2px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none', cursor: 'grab', touchAction: 'none' }}
       onClick={() => setSelectedId(isSelected ? null : field.id)}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
@@ -70,11 +70,11 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
         </div>
         <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }} onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <button onClick={e => { e.stopPropagation(); duplicateField(field); }}
-            style={{ border: '1px solid var(--border-light)', background: 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '5px', color: 'var(--text-secondary)' }}>
+            style={{ border: '1px solid var(--border-light)', background: 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '2px', color: 'var(--text-secondary)' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
           <button onClick={e => { e.stopPropagation(); deleteField(field.id); }}
-            style={{ border: '1px solid #fecdca', background: 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '5px', color: '#d92d20' }}>
+            style={{ border: '1px solid #fecdca', background: 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '2px', color: '#d92d20' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
@@ -177,7 +177,7 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
     bn: { tabEditor: 'এডিটর', tabPreview: 'প্রিভিউ', tabSettings: 'সেটিংস', titlePH: contentType === 'quiz' ? 'শিরোনামহীন কুইজ' : 'শিরোনামহীন ফর্ম', descPH: 'বিবরণ (ঐচ্ছিক)', addField: 'প্রশ্ন যোগ করুন', addSection: 'সেকশন যোগ করুন', publish: editSlug ? 'আপডেট করুন' : 'প্রকাশ করুন', cancel: 'বাতিল', loginMsg: 'ফর্ম তৈরি করতে উইকিপিডিয়া দিয়ে লগইন করুন।', loginBtn: 'উইকিপিডিয়া দিয়ে লগইন করুন', required: 'আবশ্যিক', points: 'পয়েন্ট', options: 'অপশন (কমা দিয়ে)', correctAns: 'সঠিক উত্তর', shareTitle: 'সহযোগী', collabPH: 'উইকিপিডিয়া ব্যবহারকারী', addCollab: 'যোগ করুন', noCollab: 'কোনো সহযোগী নেই।', published: 'প্রকাশিত! লিংক শেয়ার করুন:', openLink: 'খুলুন', slugLabel: 'URL স্লাগ', imageLabel: 'কভার ইমেজ URL', timerTitle: 'টাইমার সেটিংস' },
   };
   const c = t[lang] || t.en;
-  const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text-primary)' };
+  const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text-primary)' };
   const labelStyle = { fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' };
 
   const addField = (type = 'text') => {
@@ -245,13 +245,13 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
   return (
     <div style={{ maxWidth: '980px', margin: '0 auto', padding: '20px 16px' }}>
       {statusMessage && (
-        <div style={{ background: statusMessage.includes('⚠️') || statusMessage.includes('Please') || statusMessage.includes('দিন') ? '#fffaeb' : accent, color: statusMessage.includes('⚠️') || statusMessage.includes('Please') || statusMessage.includes('দিন') ? '#b54708' : '#fff', border: statusMessage.includes('⚠️') ? '1px solid #f79009' : 'none', padding: '12px 16px', borderRadius: '8px', marginBottom: '14px', fontWeight: '600', fontSize: '14px', animation: 'fadeIn 0.3s ease' }}>
+        <div style={{ background: statusMessage.includes('⚠️') || statusMessage.includes('Please') || statusMessage.includes('দিন') ? '#fffaeb' : accent, color: statusMessage.includes('⚠️') || statusMessage.includes('Please') || statusMessage.includes('দিন') ? '#b54708' : '#fff', border: statusMessage.includes('⚠️') ? '1px solid #f79009' : 'none', padding: '12px 16px', borderRadius: '2px', marginBottom: '14px', fontWeight: '600', fontSize: '14px', animation: 'fadeIn 0.3s ease' }}>
           {statusMessage}
         </div>
       )}
 
       {generatedUrl && (
-        <div style={{ background: 'var(--surface)', borderLeft: `4px solid ${accent}`, padding: '18px 20px', borderRadius: '8px', marginBottom: '18px' }}>
+        <div style={{ background: 'var(--surface)', borderLeft: `4px solid ${accent}`, padding: '18px 20px', borderRadius: '2px', marginBottom: '18px' }}>
           <p style={{ margin: '0 0 10px', fontWeight: '700', color: accent, fontSize: '14px' }}>{c.published}</p>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <input readOnly value={generatedUrl} onClick={e => e.target.select()} style={{ ...inputStyle, flex: 1, color: accent, fontWeight: '600', minWidth: '200px' }} />
@@ -271,14 +271,14 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
       {activeTab === 'editor' && (
         <div className="fb-grid">
           <div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: '8px', padding: '22px', marginBottom: '14px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: '2px', padding: '22px', marginBottom: '14px' }}>
               <input type="text" placeholder={c.titlePH} value={formTitle} onChange={e => setFormTitle(e.target.value)}
                 style={{ width: '100%', fontSize: '22px', fontWeight: '800', border: 'none', borderBottom: '2px solid var(--border-light)', paddingBottom: '10px', marginBottom: '14px', outline: 'none', color: 'var(--text-primary)', background: 'transparent', boxSizing: 'border-box' }} />
               <textarea placeholder={c.descPH} value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             </div>
 
             {!wikiUser ? (
-              <div style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '8px', padding: '40px 24px', textAlign: 'center' }}>
+              <div style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '2px', padding: '40px 24px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>{c.loginMsg}</p>
                 <button onClick={onLogin} className="wiki-btn">{c.loginBtn}</button>
               </div>
@@ -296,11 +296,11 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
                 </DndContext>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                  <div onClick={() => addField('text')} style={{ flex: 1, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: accent, fontWeight: '600', fontSize: '14px', minWidth: '140px' }}>
+                  <div onClick={() => addField('text')} style={{ flex: 1, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '2px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: accent, fontWeight: '600', fontSize: '14px', minWidth: '140px' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     {c.addField}
                   </div>
-                  <div onClick={addSection} style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '8px', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#00af89', fontWeight: '600', fontSize: '14px' }}>
+                  <div onClick={addSection} style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '2px', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#00af89', fontWeight: '600', fontSize: '14px' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     {c.addSection}
                   </div>
@@ -315,18 +315,18 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
           </div>
 
           <div className="fb-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '16px' }}>
               <h4 style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Add</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {FIELD_TYPES.map(f => (
                   <button key={f.value} onClick={() => f.value === 'section' ? addSection() : addField(f.value)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '500', textAlign: 'left' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: '2px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '500', textAlign: 'left' }}>
                     {f.label}
                   </button>
                 ))}
               </div>
             </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '16px', fontSize: '13px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '16px', fontSize: '13px' }}>
               <h4 style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stats</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: 'var(--text-secondary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Questions</span><b>{questions.filter(q => q.type !== 'section').length}</b></div>
@@ -344,7 +344,7 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
       )}
 
       {activeTab === 'settings' && !wikiUser && (
-        <div style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '8px', padding: '48px 24px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: '2px', padding: '48px 24px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '18px' }}>{lang === 'bn' ? 'সেটিংস দেখতে লগইন করুন।' : 'Log in to view and edit settings.'}</p>
           <button onClick={onLogin} className="wiki-btn">{c.loginBtn}</button>
         </div>
@@ -352,16 +352,16 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
 
       {activeTab === 'settings' && wikiUser && (
         <div className="fb-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '22px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '22px' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{lang === 'bn' ? 'সাধারণ' : 'General'}</h3>
             <label style={labelStyle}>{c.slugLabel}</label>
             <input type="text" placeholder="my-form" value={customSlug} onChange={e => setCustomSlug(e.target.value)} style={{ ...inputStyle, marginBottom: '14px' }} />
             <label style={labelStyle}>{c.imageLabel}</label>
             <input type="text" placeholder="https://upload.wikimedia.org/..." value={coverImage} onChange={e => setCoverImage(e.target.value)} style={inputStyle} />
-            {coverImage && <img src={coverImage} alt="Cover" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '6px', marginTop: '10px' }} onError={e => e.target.style.display = 'none'} />}
+            {coverImage && <img src={coverImage} alt="Cover" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '2px', marginTop: '10px' }} onError={e => e.target.style.display = 'none'} />}
           </div>
 
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '22px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '22px' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{c.shareTitle}</h3>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
               <input type="text" placeholder={c.collabPH} value={newCollab} onChange={e => setNewCollab(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
@@ -370,13 +370,13 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
             {collabStatus && <p style={{ fontSize: '13px', color: accent, margin: '0 0 8px' }}>{collabStatus}</p>}
             {collaborators.length === 0 ? <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{c.noCollab}</p>
               : collaborators.map((col, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--bg)', borderRadius: '6px', marginBottom: '6px', fontSize: '13px' }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--bg)', borderRadius: '2px', marginBottom: '6px', fontSize: '13px' }}>
                   <span>{col}</span>
                 </div>
               ))}
           </div>
           {contentType === 'quiz' && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '22px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '22px' }}>
               <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{c.timerTitle}</h3>
               <label style={labelStyle}>Timer Mode</label>
               <select aria-label="Timer mode" value={timerType} onChange={e => setTimerType(e.target.value)} style={{ ...inputStyle, marginBottom: '14px' }}>
@@ -426,8 +426,8 @@ function PreviewMode({ questions, formTitle, description, coverImage, contentTyp
   const isLast = currentSection === sections.length - 1;
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '28px 24px', maxWidth: '680px', margin: '0 auto', boxSizing: 'border-box' }}>
-      {coverImage && currentSection === 0 && <img src={coverImage} alt="Cover" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', marginBottom: '20px' }} onError={e => e.target.style.display='none'} />}
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '2px', padding: '28px 24px', maxWidth: '680px', margin: '0 auto', boxSizing: 'border-box' }}>
+      {coverImage && currentSection === 0 && <img src={coverImage} alt="Cover" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '2px', marginBottom: '20px' }} onError={e => e.target.style.display='none'} />}
       {currentSection === 0 && (
         <>
           <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 8px' }}>{formTitle || (lang === 'bn' ? 'শিরোনামহীন' : 'Untitled')}</h1>
@@ -443,11 +443,11 @@ function PreviewMode({ questions, formTitle, description, coverImage, contentTyp
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
               {q.text || `Question ${i + 1}`}{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
             </label>
-            {q.type === 'text' && <input type="text" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
-            {q.type === 'textarea' && <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
-            {q.type === 'email' && <input type="email" placeholder="email@example.com" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
-            {q.type === 'number' && <input type="number" style={{ width: '140px', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
-            {q.type === 'select' && <select style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px', minWidth: '200px' }}>{q.options?.map((o,j) => <option key={j}>{o}</option>)}</select>}
+            {q.type === 'text' && <input type="text" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+            {q.type === 'textarea' && <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+            {q.type === 'email' && <input type="email" placeholder="email@example.com" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+            {q.type === 'number' && <input type="number" style={{ width: '140px', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+            {q.type === 'select' && <select style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px', minWidth: '200px' }}>{q.options?.map((o,j) => <option key={j}>{o}</option>)}</select>}
             {(q.type === 'radio' || q.type === 'checkbox') && q.options?.map((o,j) => (
               <label key={j} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '14px', cursor: 'pointer', color: 'var(--text-primary)' }}>
                 <input type={q.type === 'radio' ? 'radio' : 'checkbox'} name={`q_${q.id}`} style={{ width: '16px', height: '16px' }} /> {o}

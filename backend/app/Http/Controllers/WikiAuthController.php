@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
@@ -75,10 +76,17 @@ class WikiAuthController extends Controller
             // Generate HMAC-signed token so the frontend can prove identity
             // without relying on session cookies across popup/main-window boundary.
             // Format: username|timestamp|hmac(username|timestamp, APP_KEY)
-            $ts        = time();
-            $payload   = $username . '|' . $ts;
-            $signature = hash_hmac('sha256', $payload, config('app.key'));
-            $authToken = base64_encode($payload . '|' . $signature);
+            // Generate a simple random token and store it in DB with 30-day expiry.
+            // DB verification is more reliable than HMAC across key rotations.
+            $authToken = bin2hex(random_bytes(32));
+            DB::table('auth_tokens')->insert([
+                'token'      => $authToken,
+                'username'   => $username,
+                'expires_at' => now()->addDays(30),
+                'created_at' => now(),
+            ]);
+            // Clean up expired tokens
+            DB::table('auth_tokens')->where('expires_at', '<', now())->delete();
 
             // Also generate a one-time session-init token
             $sessionToken = bin2hex(random_bytes(24));

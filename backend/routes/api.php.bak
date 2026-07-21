@@ -41,18 +41,38 @@ if (!$isAllowed && !$isCLI) {
 
 // Resolves and verifies the authenticated username.
 // Accepts either a valid server session or a verified HMAC-signed token
-// Resolves the authenticated username from session or DB-verified token.
+// sent in the X-WF-Token header. Plain X-WF-User header alone is rejected.
 function resolveUser(): string {
+    // 1. Server session is always trusted
     $fromSession = session('wf_username', '');
     if ($fromSession) return $fromSession;
-    $token = request()->header('X-WF-Token', '');
-    if (!$token) return '';
-    $row = DB::table('auth_tokens')
-        ->where('token', $token)
-        ->where('expires_at', '>', now())
-        ->first();
-    return $row ? $row->username : '';
+
+    // 2. Verify HMAC-signed token from frontend
+    $rawToken = request()->header('X-WF-Token', '');
+    if (!$rawToken) return '';
+
+    try {
+        $decoded = base64_decode($rawToken, strict: true);
+        if (!$decoded) return '';
+
+        $parts = explode('|', $decoded);
+        if (count($parts) !== 3) return '';
+
+        [$username, $ts, $signature] = $parts;
+
+        // Token must not be older than 24 hours
+        if (abs(time() - (int)$ts) > 86400) return '';
+
+        $payload       = $username . '|' . $ts;
+        $expectedSig   = hash_hmac('sha256', $payload, config('app.key'));
+        if (!hash_equals($expectedSig, $signature)) return '';
+
+        return $username;
+    } catch (\Throwable $e) {
+        return '';
+    }
 }
+
 // Session init and me — outside throttle group, no auth required
 Route::post('/auth/session-init', function (Request $request) {
     $token = $request->input('session_token', '');
