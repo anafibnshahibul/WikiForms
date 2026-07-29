@@ -18,9 +18,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const [grading, setGrading] = useState(false);
   const [gradeError, setGradeError] = useState(false);
   const [gradeResults, setGradeResults] = useState(null);
+  const [revealedAnswers, setRevealedAnswers] = useState({});
   const [score, setScore] = useState(null);
   const [fetchedQuestions, setFetchedQuestions] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+  const [sessionId, setSessionId] = useState(null);
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningCount, setWarningCount] = useState(0);
+  const heartbeatRef = React.useRef(null);
 
   const isForm = remoteData?.contentType === 'form';
   const slug = remoteData?.id;
@@ -59,6 +64,39 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       .then(data => setFetchedQuestions(data.questions || []))
       .catch(() => {});
   }, [slug]);
+
+  // Start quiz session for heartbeat tracking
+  useEffect(() => {
+    if (!isStarted || isForm || !slug) return;
+    fetch('/api/quiz/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ form_slug: slug, username: wikiUser?.username || 'anonymous' }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.session_id) setSessionId(d.session_id); })
+      .catch(() => {});
+  }, [isStarted, isForm, slug]);
+
+  // Heartbeat loop — sends ping every 3 seconds
+  useEffect(() => {
+    if (!sessionId || isForm || submitted) return;
+    heartbeatRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/quiz/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        const data = await res.json();
+        if (data.status === 'terminated') {
+          clearInterval(heartbeatRef.current);
+          setIsLocked(true);
+        }
+      } catch (e) {}
+    }, 3000);
+    return () => clearInterval(heartbeatRef.current);
+  }, [sessionId, isForm, submitted]);
 
   // Schedule status check + real-time auto-start
   useEffect(() => {
@@ -101,8 +139,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     const warn = () => {
       setWarnings(prev => {
         const n = prev + 1;
-        if (n >= 3) setIsLocked(true);
-        else alert(`[${n}/2] ${T('warning_msg')}`);
+        if (n >= 3) {
+          setIsLocked(true);
+          clearInterval(heartbeatRef.current);
+        } else {
+          setWarningCount(n);
+          setShowWarning(true);
+          setTimeout(() => setShowWarning(false), 4000);
+        }
         return n;
       });
     };
@@ -117,6 +161,49 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       window.removeEventListener('pagehide', onPageHide);
     };
   }, [isLocked, isForm, submitted, isStarted]);
+
+  // Block DevTools keyboard shortcuts, right-click, and copy/paste during quiz
+  useEffect(() => {
+    if (isLocked || isForm || submitted || !isStarted) return;
+
+    const blockKey = (e) => {
+      // F12, Ctrl+Shift+I/J/C/U, Ctrl+U
+      if (e.key === 'F12') { e.preventDefault(); return; }
+      if (e.ctrlKey && e.shiftKey && ['I','J','C','i','j','c'].includes(e.key)) { e.preventDefault(); return; }
+      if (e.ctrlKey && ['u','U'].includes(e.key)) { e.preventDefault(); return; }
+
+    };
+    const blockContext = (e) => e.preventDefault();
+
+
+    // DevTools size heuristic — fires when window shrinks (devtools docked)
+    const submittedRef = { current: false };
+    const devToolsCheck = setInterval(() => {
+      if (submittedRef.current) { clearInterval(devToolsCheck); return; }
+      const threshold = 160;
+      if (
+        window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold
+      ) {
+        clearInterval(devToolsCheck);
+        setIsLocked(true);
+        clearInterval(heartbeatRef.current);
+      }
+    }, 2000);
+
+    document.addEventListener('keydown', blockKey);
+    document.addEventListener('contextmenu', blockContext);
+
+
+    return () => {
+      document.removeEventListener('keydown', blockKey);
+      document.removeEventListener('contextmenu', blockContext);
+
+      clearInterval(devToolsCheck);
+    };
+  }, [isLocked, isForm, submitted, isStarted]);
+
+
 
   const sections = useMemo(() => {
     const result = [];
@@ -201,9 +288,12 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
         body: JSON.stringify({ form_slug: slug, title: remoteData.title, type: remoteData.contentType || 'form', answers: finalAnswers }),
       });
       if (!res.ok) { alert('Failed to submit.'); return; }
-      const gradable = allFields.filter(q => q.correctAnswer && q.correctAnswer.trim() !== '');
-      if (!isForm && gradable.length > 0) {
-        await gradeAnswers(gradable);
+      const data = await res.json().catch(() => ({}));
+      if (!isForm && data.score) {
+        // Score and per-question results come from the server — correctAnswer never sent to client
+        setScore({ earned: data.score.earned, total: data.score.total });
+        setGradeResults(data.score.results);
+        if (data.revealed) setRevealedAnswers(data.revealed);
       } else if (!isForm) {
         setScore({ earned: 0, total: 0 });
       }
@@ -223,9 +313,9 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const renderField = (field, i) => {
     const hasError = validationErrors[field.id];
     const border = hasError ? '1px solid #d92d20' : '1px solid var(--border)';
-    const base = { width: '100%', padding: '10px 12px', border, borderRadius: '2px', fontSize: '14px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit' };
+    const base = { width: '100%', padding: '10px 12px', border, borderRadius: '0', fontSize: '14px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none' };
     return (
-      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1px solid #d92d20' : '1px solid var(--border-light)', borderRadius: '2px', padding: '20px 24px', marginBottom: '10px' }}>
+      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1.5px solid #d92d20' : '1px solid var(--border)', borderLeft: hasError ? '4px solid #d92d20' : '4px solid var(--border)', borderRadius: '0', padding: '20px 24px', marginBottom: '8px' }}>
         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
           {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
         </label>
@@ -242,6 +332,32 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       </div>
     );
   };
+
+  // Custom warning popover — no browser alert()
+  const WarningPopover = () => showWarning ? (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+      background: '#1a1a2e', border: '1px solid #d92d20',
+      borderLeft: '4px solid #d92d20', borderRadius: '4px',
+      padding: '14px 20px', maxWidth: 320, boxShadow: '0 4px 20px rgba(217,45,32,0.3)',
+      animation: 'slideIn 0.2s ease'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d92d20" strokeWidth="2" strokeLinecap="round" flexShrink="0">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#d92d20', marginBottom: 2 }}>
+            Warning {warningCount}/2
+          </div>
+          <div style={{ fontSize: 13, color: '#e2e8f0' }}>{T('warning_msg')}</div>
+        </div>
+        <button onClick={() => setShowWarning(false)}
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+      </div>
+    </div>
+  ) : null;
 
   if (scheduleStatus === 'checking') return null;
 
@@ -269,6 +385,8 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   }
 
   if (isLocked) return (
+    <>
+    <WarningPopover />
     <div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>
       <div className="wiki-card" style={{ padding: '48px 32px' }}>
         <h2 style={{ color: '#d92d20' }}>{T('session_locked')}</h2>
@@ -276,12 +394,13 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
         <a href="/" className="wiki-btn" style={{ textDecoration: 'none', display: 'inline-block', marginTop: 16 }}>{T('return_home')}</a>
       </div>
     </div>
+  </>
   );
 
   // ===== SUBMITTED PAGE =====
   if (submitted) {
     if (showResult && score !== null) {
-      const gradable = allFields.filter(q => q.correctAnswer && q.correctAnswer.trim() !== '');
+      const gradable = allFields.filter(q => revealedAnswers[q.id]?.correctAnswer || (q.correctAnswer && q.correctAnswer.trim() !== ''));
       const pct = score.total > 0 ? Math.round((score.earned / score.total) * 100) : 0;
       const color = pct >= 80 ? '#00af89' : pct >= 50 ? '#f59e0b' : '#d92d20';
       return (
@@ -308,16 +427,19 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
                 const result = gradeResults?.find(r => r.id === q.id);
                 const ua = (answers[q.id] || '').toString().trim();
                 const isCorrect = ua !== '' && result?.correct;
-                const feedback = isCorrect ? q.successMsg : q.failMsg;
+                const revealed = revealedAnswers[q.id] || {};
+                const feedback = isCorrect ? (revealed.successMsg || q.successMsg) : (revealed.failMsg || q.failMsg);
+                const correctAnswer = revealed.correctAnswer || '';
                 return (
                   <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: `4px solid ${isCorrect ? '#00af89' : '#d92d20'}`, borderRadius: '2px', padding: '16px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }}>{q.text}</span>
+                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }} dangerouslySetInnerHTML={{ __html: q.text }} />
                       <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 2, background: isCorrect ? '#00af8918' : '#d92d2018', color: isCorrect ? '#00af89' : '#d92d20', whiteSpace: 'nowrap' }}>
                         {isCorrect ? <><Icon name='check' size={11} color='#00af89' style={{marginRight:3}}/>{T('correct')}</> : <><Icon name='x' size={11} color='#d92d20' style={{marginRight:3}}/>{T('incorrect')}</>}
                       </span>
                     </div>
                     {ua && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 0' }}>{T('your_answer_label')}<strong style={{ color: 'var(--text-secondary)' }}>{ua}</strong></p>}
+                    {!isCorrect && correctAnswer && <p style={{ fontSize: 13, color: '#00af89', margin: '6px 0 0' }}>{T('correct_answer_label') || 'Correct answer: '}<strong>{correctAnswer}</strong></p>}
                     {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }}>{feedback}</p>}
                   </div>
                 );
@@ -342,9 +464,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
           {gradeError && !grading && (
             <div style={{ marginBottom: 16 }}>
               <p style={{ color: '#d92d20', fontSize: 13, marginBottom: 10 }}>{T('grade_error')}</p>
-              <button onClick={() => gradeAnswers(allFields.filter(q => q.correctAnswer && q.correctAnswer.trim() !== ''))} className="wiki-btn-secondary" style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600 }}>
-                {T('retry_grading')}
-              </button>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Grading is done server-side. Please try submitting again.</p>
             </div>
           )}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -444,8 +564,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       </div>
 
       {finalSections.length > 1 && (
-        <div style={{ marginTop: 16, display: 'flex', gap: 6, justifyContent: 'center' }}>
-          {finalSections.map((_, i) => <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === currentSection ? accent : 'var(--border)' }} />)}
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
+            <span>Section {currentSection + 1} of {finalSections.length}</span>
+            <span>{Math.round(((currentSection + 1) / finalSections.length) * 100)}%</span>
+          </div>
+          <div style={{ width: '100%', height: 4, background: 'var(--border-light)', borderRadius: 0 }}>
+            <div style={{ width: `${((currentSection + 1) / finalSections.length) * 100}%`, height: '100%', background: accent, borderRadius: 0, transition: 'width 0.3s ease' }} />
+          </div>
         </div>
       )}
     </div>

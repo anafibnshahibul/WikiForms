@@ -7,40 +7,95 @@
 }
 
 /* =====================================================
-   WikiForms Global Stylesheet
+   WikiForms — Wikimedia Codex Design System
+   https://www.mediawiki.org/wiki/Codex
    ===================================================== */
-
 :root {
-  --bg: #f8f9fa;
-  --surface: #ffffff;
-  --border: #a2a9b1;
-  --border-light: #eaecf0;
-  --text-primary: #202122;
-  --text-secondary: #475467;
-  --text-muted: #6b7280;
-  --wiki-blue: #3366cc;
-  --wiki-blue-hover: #4477dd;
-  --wiki-green: #00af89;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 20px 40px rgba(0,0,0,0.10);
-  --radius: 8px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Codex Color Palette */
+  --color-progressive:         #3366cc;
+  --color-progressive--hover:  #2a4b8d;
+  --color-progressive--active: #2a4b8d;
+  --color-destructive:         #d92d20;
+  --color-destructive--hover:  #b32424;
+  --color-success:             #00af89;
+  --color-warning:             #f59e0b;
+  --color-base:                #202122;
+  --color-base--subtle:        #54595d;
+  --color-base--disabled:      #72777d;
+  --color-placeholder:         #72777d;
+  --color-inverted:            #fff;
+  --color-surface:             #fff;
+  --color-background:          #f8f9fa;
+  --color-border:              #a2a9b1;
+  --color-border-subtle:       #eaecf0;
+
+  /* Codex Typography */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                      Roboto, Lato, Helvetica, Arial, sans-serif;
+  --font-size-x-small:  0.75rem;
+  --font-size-small:    0.875rem;
+  --font-size-medium:   1rem;
+  --font-size-large:    1.125rem;
+  --font-size-x-large:  1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-semi-bold: 600;
+  --font-weight-bold:   700;
+  --line-height-base:   1.6;
+
+  /* Codex Spacing */
+  --spacing-25:  0.25rem;
+  --spacing-50:  0.5rem;
+  --spacing-75:  0.75rem;
+  --spacing-100: 1rem;
+  --spacing-150: 1.5rem;
+  --spacing-200: 2rem;
+
+  /* Codex Border */
+  --border-width-base:    1px;
+  --border-style-base:    solid;
+  --border-radius-base:   2px;
+  --border-color-base:    #a2a9b1;
+  --border-color-subtle:  #eaecf0;
+  --border-color-progressive: #3366cc;
+
+  /* Codex Shadows */
+  --box-shadow-card:    0 1px 3px rgba(0,0,0,0.06);
+  --box-shadow-menu:    0 4px 12px rgba(0,0,0,0.08);
+  --box-shadow-dialog:  0 20px 40px rgba(0,0,0,0.10);
+
+  /* Legacy variable aliases — keep backward compatibility */
+  --bg:             var(--color-background);
+  --surface:        var(--color-surface);
+  --border:         var(--color-border);
+  --border-light:   var(--color-border-subtle);
+  --text-primary:   var(--color-base);
+  --text-secondary: var(--color-base--subtle);
+  --text-muted:     var(--color-base--disabled);
+  --wiki-blue:      var(--color-progressive);
+  --wiki-blue-hover:var(--color-progressive--hover);
+  --wiki-green:     var(--color-success);
+  --shadow-sm:      var(--box-shadow-card);
+  --shadow-md:      var(--box-shadow-menu);
+  --shadow-lg:      var(--box-shadow-dialog);
+  --radius:         var(--border-radius-base);
+  --radius-lg:      var(--border-radius-base);
+  --radius-xl:      var(--border-radius-base);
 }
 
+/* Codex Dark Mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --border: #2e3244;
-    --border-light: #252836;
-    --text-primary: #f1f3f5;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-    --shadow-lg: 0 20px 40px rgba(0,0,0,0.5);
+    --color-base:           #f1f3f5;
+    --color-base--subtle:   #9ca3af;
+    --color-base--disabled: #6b7280;
+    --color-surface:        #1a1d27;
+    --color-background:     #0f1117;
+    --color-border:         #2e3244;
+    --color-border-subtle:  #252836;
+    --color-inverted:       #202122;
+    --box-shadow-card:    0 1px 3px rgba(0,0,0,0.3);
+    --box-shadow-menu:    0 4px 12px rgba(0,0,0,0.4);
+    --box-shadow-dialog:  0 20px 40px rgba(0,0,0,0.5);
   }
 }
 
@@ -48,15 +103,19 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg);
-  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-medium);
+  line-height: var(--line-height-base);
+  background-color: var(--color-background);
+  color: var(--color-base);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   min-height: 100dvh;
 }
 
-/* Layout */
+/* =====================================================
+   LAYOUT
+   ===================================================== */
 .wikiform-main-layout {
   display: flex;
   flex-direction: column;
@@ -72,15 +131,17 @@ body {
   padding: 0 16px;
 }
 
-/* Header */
+/* =====================================================
+   CODEX HEADER
+   ===================================================== */
 .wiki-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-surface);
+  border-bottom: var(--border-width-base) var(--border-style-base) var(--color-border);
   padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--box-shadow-card);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -97,8 +158,7 @@ body {
   text-decoration: none;
   flex-shrink: 0;
 }
-
-.wiki-brand strong { color: var(--text-primary); }
+.wiki-brand strong { color: var(--color-base); }
 
 .wiki-header-controls {
   display: flex;
@@ -109,26 +169,28 @@ body {
 
 .lang-selector {
   padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text-primary);
-  font-size: 13px;
+  border: var(--border-width-base) var(--border-style-base) var(--color-border);
+  border-radius: var(--border-radius-base);
+  background: var(--color-surface);
+  color: var(--color-base);
+  font-size: var(--font-size-small);
   cursor: pointer;
 }
 
-/* Buttons */
+/* =====================================================
+   CODEX BUTTONS
+   ===================================================== */
 .wiki-btn {
-  background: var(--wiki-blue);
-  color: #fff;
-  border: 1px solid var(--wiki-blue);
-  border-radius: var(--radius);
+  background: var(--color-progressive);
+  color: var(--color-inverted);
+  border: var(--border-width-base) var(--border-style-base) var(--color-progressive);
+  border-radius: var(--border-radius-base);
   padding: 9px 18px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-semi-bold);
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
+  font-family: var(--font-family-base);
+  transition: background-color 100ms, border-color 100ms;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -137,56 +199,68 @@ body {
   white-space: nowrap;
   min-height: 38px;
 }
-.wiki-btn:hover { background: var(--wiki-blue-hover); border-color: var(--wiki-blue-hover); }
+.wiki-btn:hover {
+  background: var(--color-progressive--hover);
+  border-color: var(--color-progressive--hover);
+}
 .wiki-btn:active { opacity: 0.9; }
 
 .wiki-btn-secondary {
-  background: var(--surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-base);
+  border: var(--border-width-base) var(--border-style-base) var(--color-border);
+  border-radius: var(--border-radius-base);
   padding: 9px 18px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-semi-bold);
   cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
+  font-family: var(--font-family-base);
+  transition: background-color 100ms;
   white-space: nowrap;
   min-height: 38px;
 }
-.wiki-btn-secondary:hover { background: var(--bg); }
+.wiki-btn-secondary:hover { background: var(--color-background); }
 
-/* Cards */
+/* =====================================================
+   CODEX CARDS
+   ===================================================== */
 .wiki-card {
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: var(--border-width-base) var(--border-style-base) var(--color-border-subtle);
+  border-radius: var(--border-radius-base);
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--box-shadow-card);
   width: 100%;
   box-sizing: border-box;
 }
-.wiki-card.accent-blue  { border-top: 4px solid var(--wiki-blue); }
-.wiki-card.accent-green { border-top: 4px solid var(--wiki-green); }
+.wiki-card.accent-blue  { border-top: 4px solid var(--color-progressive); }
+.wiki-card.accent-green { border-top: 4px solid var(--color-success); }
 
-/* Inputs */
+/* =====================================================
+   CODEX INPUTS
+   ===================================================== */
 .input-field {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
+  background: var(--color-background);
+  border: var(--border-width-base) var(--border-style-base) var(--color-border-subtle);
+  border-radius: var(--border-radius-base);
   padding: 10px 12px;
-  font-size: 14px;
-  color: var(--text-primary);
-  font-family: inherit;
+  font-size: var(--font-size-medium);
+  color: var(--color-base);
+  font-family: var(--font-family-base);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 100ms;
   box-sizing: border-box;
 }
-.input-field:focus { border-color: var(--wiki-blue); }
+.input-field:focus {
+  border-color: var(--color-progressive);
+  box-shadow: inset 0 0 0 1px var(--color-progressive);
+}
 
-/* Welcome */
+/* =====================================================
+   WELCOME SCREEN — Codex style
+   ===================================================== */
 .welcome-wrapper {
   padding: 24px 16px;
   min-height: 80vh;
@@ -198,13 +272,13 @@ body {
 }
 
 .welcome-card {
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: var(--border-width-base) var(--border-style-base) var(--color-border-subtle);
+  border-radius: var(--border-radius-base);
   padding: 40px 32px;
   max-width: 760px;
   width: 100%;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--box-shadow-dialog);
   text-align: center;
   animation: fadeIn 0.5s ease;
   box-sizing: border-box;
@@ -213,37 +287,40 @@ body {
 .welcome-badge {
   display: inline-block;
   background: #eaf3ff;
-  color: var(--wiki-blue);
-  padding: 6px 16px;
-  border-radius: 30px;
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--color-progressive);
+  padding: 4px 12px;
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semi-bold);
+  border: 1px solid #c5d9f8;
 }
 
 @media (prefers-color-scheme: dark) {
-  .welcome-badge { background: rgba(51,102,204,0.2); }
+  .welcome-badge {
+    background: rgba(51,102,204,0.2);
+    border-color: rgba(51,102,204,0.4);
+  }
 }
 
 .welcome-title {
-  font-size: 36px;
-  font-weight: 800;
-  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-base);
   margin: 16px 0 0;
-  letter-spacing: -1px;
   line-height: 1.2;
 }
 
 .welcome-divider {
   border: 0;
   height: 1px;
-  background: var(--border-light);
+  background: var(--color-border-subtle);
   margin: 20px auto;
   max-width: 100px;
 }
 
 .welcome-desc {
-  font-size: 15px;
-  color: var(--text-secondary);
+  font-size: var(--font-size-medium);
+  color: var(--color-base--subtle);
   line-height: 1.8;
   text-align: justify;
   max-width: 680px;
@@ -251,15 +328,17 @@ body {
 }
 
 .welcome-cta {
-  padding: 14px 44px;
-  font-size: 16px;
-  font-weight: 700;
+  padding: 12px 40px;
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
 }
 
-/* Type Select */
+/* =====================================================
+   TYPE SELECT — Codex card style
+   ===================================================== */
 .select-wrapper { text-align: center; animation: fadeIn 0.4s ease; padding: 16px; }
-.select-title { font-size: 26px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.select-desc { color: var(--text-secondary); margin-bottom: 28px; font-size: 15px; }
+.select-title { font-size: 22px; font-weight: var(--font-weight-bold); color: var(--color-base); margin-bottom: 8px; }
+.select-desc { color: var(--color-base--subtle); margin-bottom: 28px; font-size: var(--font-size-medium); }
 
 .select-grid {
   display: flex;
@@ -269,23 +348,25 @@ body {
 }
 
 .type-card {
-  background: var(--surface);
-  border: 2px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border-subtle);
+  border-radius: var(--border-radius-base);
   padding: 28px 20px;
   width: 200px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 100ms, box-shadow 100ms;
   text-align: center;
   box-sizing: border-box;
 }
-.type-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 8px; }
-.type-card p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
-.type-card--form:hover { border-color: var(--wiki-blue); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(51,102,204,0.12); }
-.type-card--quiz:hover { border-color: var(--wiki-green); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,175,137,0.12); }
+.type-card h3 { font-size: 16px; font-weight: var(--font-weight-semi-bold); margin: 0 0 8px; }
+.type-card p  { font-size: var(--font-size-small); color: var(--color-base--subtle); margin: 0; line-height: 1.5; }
+.type-card--form:hover { border-color: var(--color-progressive); box-shadow: 0 2px 8px rgba(51,102,204,0.15); }
+.type-card--quiz:hover { border-color: var(--color-success); box-shadow: 0 2px 8px rgba(0,175,137,0.15); }
 
+/* Icon wrap — keep circle for icon containers */
 .type-icon-wrap {
-  width: 60px; height: 60px; border-radius: 50%;
+  width: 52px; height: 52px;
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 14px;
 }
@@ -297,7 +378,9 @@ body {
   .type-icon-wrap--green { background: rgba(0,175,137,0.15); }
 }
 
-/* FormBuilder Grid */
+/* =====================================================
+   FORM BUILDER GRID
+   ===================================================== */
 .fb-grid {
   display: grid;
   grid-template-columns: 1fr 260px;
@@ -306,7 +389,6 @@ body {
   width: 100%;
 }
 
-/* Mobile FAB */
 .fb-mobile-add {
   display: none;
   position: fixed;
@@ -319,10 +401,9 @@ body {
 }
 
 .fb-mobile-fab {
-  width: 52px;
-  height: 52px;
+  width: 52px; height: 52px;
   border-radius: 50%;
-  background: #3366cc;
+  background: var(--color-progressive);
   color: white;
   border: none;
   cursor: pointer;
@@ -331,16 +412,16 @@ body {
   justify-content: center;
   box-shadow: 0 4px 16px rgba(51,102,204,0.4);
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   flex-shrink: 0;
 }
 
 .fb-mobile-fab-menu {
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: var(--border-width-base) var(--border-style-base) var(--color-border-subtle);
+  border-radius: var(--border-radius-base);
   padding: 8px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--box-shadow-dialog);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -354,100 +435,28 @@ body {
   border: none;
   background: none;
   text-align: left;
-  font-size: 14px;
-  color: var(--text-primary);
+  font-size: var(--font-size-medium);
+  color: var(--color-base);
   cursor: pointer;
-  border-radius: 8px;
-  font-family: inherit;
+  border-radius: var(--border-radius-base);
+  font-family: var(--font-family-base);
   font-weight: 500;
 }
-.fb-mobile-fab-item:hover { background: var(--bg); }
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.fb-mobile-fab-item:hover { background: var(--color-background); }
 
 /* =====================================================
-   RESPONSIVE BREAKPOINTS
+   STATUS & WARNINGS
    ===================================================== */
-
-/* Tablet & Mobile */
-@media (max-width: 900px) {
-  .fb-grid {
-    grid-template-columns: 1fr;
-  }
-  .fb-sidebar {
-    display: none !important;
-  }
-  .fb-mobile-add {
-    display: flex;
-  }
-}
-
-@media (max-width: 768px) {
-  .welcome-card {
-    padding: 28px 20px;
-    border-radius: var(--radius-lg);
-  }
-  .welcome-title { font-size: 28px; }
-  .welcome-desc { font-size: 14px; text-align: left; }
-  .welcome-cta { padding: 12px 32px; width: 100%; }
-
-  .type-card { width: 100%; max-width: 280px; }
-
-  .wiki-header { padding: 8px 12px; }
-  .wikiform-container { padding: 0 12px; margin: 16px auto; }
-
-  .wiki-btn, .wiki-btn-secondary {
-    padding: 11px 16px;
-    min-height: 44px;
-    font-size: 15px;
-  }
-
-  .fb-settings-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .fb-actions {
-    flex-direction: column;
-  }
-  .fb-actions button, .fb-actions a {
-    width: 100%;
-  }
-
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .welcome-title { font-size: 24px; }
-  .select-title { font-size: 22px; }
-  .wiki-header { gap: 6px; }
-}
-
-/* iPad / Tablet specific */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .fb-grid {
-    grid-template-columns: 1fr 220px;
-  }
-  .welcome-card { padding: 36px 28px; }
-  .wikiform-container { max-width: 680px; }
-}
-
-/* Warning Banner */
 .status-warning {
   background: #fffaeb;
-  border: 1px solid #f79009;
+  border: var(--border-width-base) var(--border-style-base) #f79009;
   border-left: 4px solid #f79009;
   color: #b54708;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--border-radius-base);
   margin-bottom: 14px;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--font-weight-semi-bold);
+  font-size: var(--font-size-medium);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -464,16 +473,55 @@ body {
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
-/* Header username — desktop only */
-.header-username {
-  display: inline;
+/* =====================================================
+   ANIMATIONS
+   ===================================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+
+/* =====================================================
+   HEADER USERNAME
+   ===================================================== */
+.header-username { display: inline; }
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 900px) {
+  .fb-grid { grid-template-columns: 1fr; }
+  .fb-sidebar { display: none !important; }
+  .fb-mobile-add { display: flex; }
+}
+
 @media (max-width: 768px) {
-  .header-username {
-    display: none !important;
-  }
+  .welcome-card { padding: 28px 20px; }
+  .welcome-title { font-size: 24px; }
+  .welcome-desc { font-size: var(--font-size-small); text-align: left; }
+  .welcome-cta { padding: 12px 28px; width: 100%; }
+  .type-card { width: 100%; max-width: 280px; }
+  .wiki-header { padding: 8px 12px; }
+  .wikiform-container { padding: 0 12px; margin: 16px auto; }
+  .wiki-btn, .wiki-btn-secondary { padding: 11px 16px; min-height: 44px; }
+  .fb-settings-grid { grid-template-columns: 1fr !important; }
+  .fb-actions { flex-direction: column; }
+  .fb-actions button, .fb-actions a { width: 100%; }
+  input, select, textarea { font-size: 16px !important; }
+  .header-username { display: none !important; }
+}
+
+@media (max-width: 480px) {
+  .welcome-title { font-size: 22px; }
+  .select-title  { font-size: 20px; }
+  .wiki-header   { gap: 6px; }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .fb-grid { grid-template-columns: 1fr 220px; }
+  .wikiform-container { max-width: 680px; }
 }

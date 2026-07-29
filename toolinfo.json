@@ -1,6 +1,7 @@
 {
     "name": "wikiforms",
     "title": "WikiForms",
+    "version": "2.0.0"
     "description": "Amazing Drag and Drop Form Builder for Wikimedia",
     "url": "https://wikiforms.toolforge.org",
     "keywords": "wikimedia, forms, drag-and-drop",

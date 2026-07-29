@@ -4,7 +4,27 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
-// Custom error code 677 — request from unauthorized external origin.
+// ============================================================
+// Security Gate — runs on every API request
+// ============================================================
+
+// 1. Block oversized requests (max 1MB) — prevents payload flooding
+if ((int) request()->header('Content-Length', 0) > 1_048_576) {
+    return response()->json(['status' => 'error', 'message' => 'Request too large.'], 413);
+}
+
+// 2. Block known scanner/bot user agents
+$ua = strtolower(request()->header('User-Agent', ''));
+$blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra', 'python-requests', 'go-http-client', 'java/', 'libwww', 'lwp-', 'wget/', 'curl/'];
+foreach ($blockedAgents as $bot) {
+    if (str_contains($ua, $bot)) {
+        return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+    }
+}
+
+
+
+// 3. Custom error code 677 — request from unauthorized external origin.
 // Browsers always send Origin on cross-origin requests; direct server calls won't have it.
 $origin  = request()->header('Origin', '');
 $referer = request()->header('Referer', '');
@@ -23,20 +43,10 @@ if ($isBrowser) {
     }
 }
 
-// Reject requests not originating from the official domain.
-// Checks both Origin and Referer headers — spoofing both from a browser is not possible.
-// Note: curl/Postman can spoof these, but that is acceptable for a public web tool.
-$origin  = request()->header('Origin', '');
-$referer = request()->header('Referer', '');
-$allowed = 'https://wikiforms.toolforge.org';
-
-$isAllowed = str_starts_with($origin, $allowed) || str_starts_with($referer, $allowed);
-
-// Allow server-side / CLI calls (no Origin/Referer) only in non-production
-$isCLI = empty($origin) && empty($referer);
-
-if (!$isAllowed && !$isCLI) {
-    abort(403, 'Requests from unauthorized origins are not allowed.');
+// 4. Cleanup expired auth tokens periodically (1% chance per request — cheap maintenance)
+if (random_int(1, 100) === 1) {
+    DB::table('auth_tokens')->where('expires_at', '<', now()->subDays(1))->delete();
+    DB::table('quiz_sessions')->where('created_at', '<', now()->subDays(7))->delete();
 }
 
 // Resolves and verifies the authenticated username.
@@ -189,23 +199,57 @@ Route::middleware('throttle:20,1')->group(function () {
         return response()->json(['status' => 'success', 'questions' => $questions]);
     });
 
-    Route::post('/save-response', function (Request $request) {
+    Route::middleware('throttle:10,1')->post('/save-response', function (Request $request) {
         $v = $request->validate([
             'form_slug' => 'required|string',
             'title'     => 'required|string',
             'type'      => 'required|string',
             'answers'   => 'required|array',
         ]);
+
+        $score = null;
+        if ($v['type'] === 'quiz') {
+            $form = DB::table('forms')->where('slug', $v['form_slug'])->first();
+            if ($form) {
+                try {
+                    $questions = json_decode(Crypt::decryptString($form->questions), true) ?? [];
+                } catch (\Exception $e) {
+                    $questions = [];
+                }
+                $gradable = array_filter($questions, fn($q) => !empty(trim($q['correctAnswer'] ?? '')));
+                if (count($gradable) > 0) {
+                    $score = app(\App\Http\Controllers\GradingController::class)
+                                ->gradeItems(array_values($gradable), $v['answers']);
+                }
+            }
+        }
+
         DB::table('form_responses')->insert([
             'form_slug'  => $v['form_slug'],
             'title'      => $v['title'],
             'type'       => $v['type'],
             'answers'    => json_encode($v['answers']),
+            'score'      => $score !== null ? json_encode($score) : null,
             'timestamp'  => now()->toDateTimeString(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return response()->json(['status' => 'success']);
+
+        $response = ['status' => 'success'];
+        if ($score !== null) {
+            $response['score'] = $score;
+            // Safe to reveal correct answers now — quiz is already submitted
+            $revealed = [];
+            foreach ($questions as $q) {
+                $revealed[$q['id'] ?? ''] = [
+                    'correctAnswer' => $q['correctAnswer'] ?? '',
+                    'successMsg'    => $q['successMsg'] ?? '',
+                    'failMsg'       => $q['failMsg'] ?? '',
+                ];
+            }
+            $response['revealed'] = $revealed;
+        }
+        return response()->json($response);
     });
 
     Route::get('/get-responses/{slug}', function ($slug) {
@@ -232,7 +276,126 @@ Route::middleware('throttle:20,1')->group(function () {
         return response()->json(['status' => 'success', 'responses' => $responses]);
     });
 
-    Route::post('/grade-response', [\App\Http\Controllers\GradingController::class, 'gradeResponse']);
+    Route::middleware('throttle:5,1')->post('/grade-response', [\App\Http\Controllers\GradingController::class, 'gradeResponse']);
+    // ============================================================
+    // Heartbeat Anti-Cheat Module
+    // ============================================================
+
+    // Start a quiz session — returns a session token and server-side deadline.
+    Route::middleware('throttle:10,1')->post('/quiz/start', function (Request $request) {
+        $v = $request->validate([
+            'form_slug' => 'required|string',
+            'username'  => 'nullable|string',
+        ]);
+
+        $form = DB::table('forms')->where('slug', $v['form_slug'])->first();
+        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found.'], 404);
+
+        // Only quizzes need heartbeat
+        if ($form->content_type !== 'quiz') {
+            return response()->json(['status' => 'skip']);
+        }
+
+        $sessionId = bin2hex(random_bytes(32));
+        $duration  = ($form->timer_duration > 0) ? $form->timer_duration : 60;
+        $deadline  = now()->addMinutes($duration);
+
+        DB::table('quiz_sessions')->insert([
+            'id'         => $sessionId,
+            'form_slug'  => $v['form_slug'],
+            'username'   => $v['username'] ?? 'anonymous',
+            'started_at' => now(),
+            'last_beat'  => now(),
+            'status'     => 'active',
+            'deadline'   => $deadline,
+        ]);
+
+        return response()->json([
+            'status'     => 'success',
+            'session_id' => $sessionId,
+            'deadline'   => $deadline->toIso8601String(),
+        ]);
+    });
+
+    // Heartbeat ping — client sends every 3 seconds while quiz is active.
+    // Browser tab freeze causes JS to stop, missing beats flags the session.
+    Route::post('/quiz/heartbeat', function (Request $request) {
+        $v = $request->validate([
+            'session_id' => 'required|string|size:64',
+        ]);
+
+        $session = DB::table('quiz_sessions')
+            ->where('id', $v['session_id'])
+            ->where('status', 'active')
+            ->first();
+
+        if (!$session) {
+            return response()->json(['status' => 'terminated', 'reason' => 'Session not found or already terminated.'], 403);
+        }
+
+        // Check if server-side deadline has passed
+        if (now()->greaterThan($session->deadline)) {
+            DB::table('quiz_sessions')
+                ->where('id', $v['session_id'])
+                ->update(['status' => 'terminated', 'terminate_reason' => 'deadline_exceeded']);
+            return response()->json(['status' => 'terminated', 'reason' => 'Time is up.'], 403);
+        }
+
+        // Check if last beat was too long ago (> 5 seconds = tab was switched)
+        $lastBeat  = \Carbon\Carbon::parse($session->last_beat);
+        $gapSeconds = now()->diffInSeconds($lastBeat);
+
+        if ($gapSeconds > 5) {
+            DB::table('quiz_sessions')
+                ->where('id', $v['session_id'])
+                ->update(['status' => 'terminated', 'terminate_reason' => 'heartbeat_missed']);
+            return response()->json(['status' => 'terminated', 'reason' => 'Tab switch detected.'], 403);
+        }
+
+        // Update last_beat timestamp
+        DB::table('quiz_sessions')
+            ->where('id', $v['session_id'])
+            ->update(['last_beat' => now()]);
+
+        return response()->json([
+            'status'    => 'alive',
+            'server_ts' => now()->toIso8601String(),
+        ]);
+    });
+
+    // Validate session before accepting submission
+    Route::middleware('throttle:10,1')->post('/quiz/validate-session', function (Request $request) {
+        $v = $request->validate([
+            'session_id' => 'required|string|size:64',
+            'form_slug'  => 'required|string',
+        ]);
+
+        $session = DB::table('quiz_sessions')
+            ->where('id', $v['session_id'])
+            ->where('form_slug', $v['form_slug'])
+            ->first();
+
+        if (!$session) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid session.'], 403);
+        }
+
+        if ($session->status === 'terminated') {
+            return response()->json(['status' => 'terminated', 'reason' => $session->terminate_reason], 403);
+        }
+
+        if (now()->greaterThan($session->deadline)) {
+            return response()->json(['status' => 'terminated', 'reason' => 'deadline_exceeded'], 403);
+        }
+
+        // Mark as submitted
+        DB::table('quiz_sessions')
+            ->where('id', $v['session_id'])
+            ->update(['status' => 'submitted']);
+
+        return response()->json(['status' => 'valid']);
+    });
+
+
 
 
 
@@ -400,6 +563,11 @@ Route::post('/publisher', function (Request $request) {
 
     if ($v['lang_code'] === 'en' && $row->contributed_by === 'system') {
         return response()->json(['status' => 'error', 'message' => 'English source keys cannot be republished.'], 403);
+    }
+
+    // Only the contributor can publish their own draft
+    if ($row->contributed_by !== $sessionUser) {
+        return response()->json(['status' => 'error', 'message' => 'Forbidden: you can only publish your own translations.'], 403);
     }
 
     DB::table('translations')

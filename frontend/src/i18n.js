@@ -11,13 +11,19 @@ const FALLBACK = {
   grading: 'Grading...', correct: 'Correct', incorrect: 'Incorrect',
   view_result: 'View My Result', retry_grading: 'Try Again',
   grade_error: 'Could not evaluate your answers right now.',
-  field_required: 'This field is required.', your_answer: 'Your answer...',
+  field_required: 'This field is required.', your_answer: 'Your answer...', correct_answer_label: 'Correct answer: ',
   anticheat_active: 'Anti-Cheat Active', time_left: 'Time Left',
   session_locked: 'Session Locked', locked_desc: 'Locked due to tab switches.',
   return_home: 'Return to Home', responses: 'Responses',
   no_responses: 'No responses yet.', edit: 'Edit',
   header_login: 'Log In with Wikipedia', header_logout: 'Log Out',
   form_not_found: '404 — Form not found',
+  your_answer_label: 'Your answer: ', your_result: 'Your Result',
+  excellent: 'Excellent!', good_job: 'Good job!', keep_practicing: 'Keep practicing!',
+  quiz_not_started: 'This quiz has not started yet.', quiz_ended: 'This quiz has ended.',
+  starts_at: 'Starts: ', warning_msg: 'Warning: Do not leave the quiz!',
+  select_placeholder: 'Select...', no_questions: 'No questions found.',
+  results_later: 'Results will be shared by the owner later.',
 };
 
 const _cache = {};

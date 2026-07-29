@@ -18,7 +18,7 @@ const FIELD_TYPES = [
 ];
 
 const Toggle = ({ checked, onChange }) => (
-  <div onClick={() => onChange(!checked)} style={{ width: '40px', height: '22px', borderRadius: '2px', background: checked ? '#3366cc' : '#d0d5dd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+  <div onClick={() => onChange(!checked)} style={{ width: '40px', height: '22px', borderRadius: '11px', background: checked ? '#3366cc' : '#d0d5dd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: checked ? '20px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
   </div>
 );
@@ -441,7 +441,7 @@ function PreviewMode({ questions, formTitle, description, coverImage, contentTyp
         {section.fields.map((q, i) => (
           <div key={q.id}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-              {q.text || `Question ${i + 1}`}{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
+              <span dangerouslySetInnerHTML={{ __html: q.text || `Question ${i + 1}` }} />{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
             </label>
             {q.type === 'text' && <input type="text" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
             {q.type === 'textarea' && <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
