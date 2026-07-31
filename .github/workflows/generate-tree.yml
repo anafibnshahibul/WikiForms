@@ -1,20 +1,15 @@
-name: Generate Repository File Tree
+name: Print Repository File Tree
 
 on:
   push:
     branches:
       - main
       - master
-    paths-ignore:
-      - '.github/workflows/file-tree.md'
   workflow_dispatch:
 
 jobs:
-  build-tree:
+  print-tree:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout Code
@@ -23,25 +18,12 @@ jobs:
       - name: Install Tree Tool
         run: sudo apt-get update && sudo apt-get install -y tree
 
-      - name: Generate File Tree
+      - name: Display File Tree in Action Logs
         run: |
-          mkdir -p .github/workflows
-          echo "# Project Directory Structure" > .github/workflows/file-tree.md
-          echo "" >> .github/workflows/file-tree.md
-          echo "Last generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> .github/workflows/file-tree.md
-          echo "" >> .github/workflows/file-tree.md
-          echo '```' >> .github/workflows/file-tree.md
-          tree -I 'node_modules|vendor|.git|.idea|.vscode|dist|build|storage/framework/cache|storage/framework/sessions|storage/framework/views|storage/logs' >> .github/workflows/file-tree.md
-          echo '```' >> .github/workflows/file-tree.md
-
-      - name: Commit and Push File Tree
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/file-tree.md
-          if git diff --staged --quiet; then
-            echo "No changes in directory tree."
-          else
-            git commit -m "docs: auto-update repository file tree [skip ci]"
-            git push
-          fi
+          echo "=================================================="
+          echo "          WIKIFORMS FILE TREE DIRECTORY           "
+          echo "=================================================="
+          echo ""
+          tree -I 'node_modules|vendor|.git|.idea|.vscode|dist|build|storage/framework/cache|storage/framework/sessions|storage/framework/views|storage/logs'
+          echo ""
+          echo "=================================================="
