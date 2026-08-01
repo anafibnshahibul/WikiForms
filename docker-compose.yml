@@ -1,46 +1,74 @@
 version: '3.8'
 
 services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+  db:
+    image: mysql:8.0
+    container_name: wikiforms_db
+    restart: unless-stopped
     environment:
-      - CHOKIDAR_USEPOLLING=true
+      MYSQL_DATABASE: wikiforms_local
+      MYSQL_USER: wikiforms
+      MYSQL_PASSWORD: wikiforms_local_pass
+      MYSQL_ROOT_PASSWORD: wikiforms_root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "wikiforms", "-pwikiforms_local_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wikiforms_backend
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./backend/.env
     environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - DB_HOST=db
-      - DB_DATABASE=wikiforms_db
-      - DB_USERNAME=wiki_user
-      - DB_PASSWORD=wiki_secure_pass
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: wikiforms_local
+      DB_USERNAME: wikiforms
+      DB_PASSWORD: wikiforms_local_pass
     volumes:
       - ./backend:/app
+      - /app/vendor
+    expose:
+      - "9000"
 
-  db:
-    image: mysql:8.0
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_DATABASE: wikiforms_db
-      MYSQL_USER: wiki_user
-      MYSQL_PASSWORD: wiki_secure_pass
-      MYSQL_ROOT_PASSWORD: root_secure_pass
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wikiforms_frontend
     volumes:
-      - db_data:/var/lib/mysql
+      - frontend_dist:/output
+
+  web:
+    build:
+      context: ./docker/lighttpd
+      dockerfile: Dockerfile
+    container_name: wikiforms_web
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - frontend_dist:/var/www/public_html
+      - ./docker/lighttpd/lighttpd.conf:/etc/lighttpd/lighttpd.conf:ro
 
 volumes:
   db_data:
+  frontend_dist:

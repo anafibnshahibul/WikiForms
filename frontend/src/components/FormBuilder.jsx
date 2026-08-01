@@ -17,13 +17,26 @@ const FIELD_TYPES = [
   { value: 'section',    label: 'Section Break' },
 ];
 
+// Evaluate whether a question should be shown based on showIf condition
+export function evalCondition(showIf, answers) {
+  if (!showIf || !showIf.questionId) return true;
+  const val = answers[showIf.questionId];
+  const userVal = Array.isArray(val) ? val.join(',') : (val || '');
+  const target  = showIf.value || '';
+  if (showIf.operator === 'equals')     return userVal.toLowerCase() === target.toLowerCase();
+  if (showIf.operator === 'not_equals') return userVal.toLowerCase() !== target.toLowerCase();
+  if (showIf.operator === 'contains')   return userVal.toLowerCase().includes(target.toLowerCase());
+  if (showIf.operator === 'not_empty')  return userVal.trim() !== '';
+  return true;
+}
+
 const Toggle = ({ checked, onChange }) => (
   <div onClick={() => onChange(!checked)} style={{ width: '40px', height: '22px', borderRadius: '11px', background: checked ? '#3366cc' : '#d0d5dd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: checked ? '20px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
   </div>
 );
 
-function SortableField({ field, idx, selectedId, setSelectedId, updateField, deleteField, duplicateField, contentType, accent, c, labelStyle, inputStyle }) {
+function SortableField({ field, idx, selectedId, setSelectedId, updateField, deleteField, duplicateField, contentType, accent, c, labelStyle, inputStyle, allQuestions = [] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
@@ -122,6 +135,34 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
                 <input type="text" value={field.correctAnswer} onChange={e => updateField(field.id, 'correctAnswer', e.target.value)} style={inputStyle} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} />
               </div>
             </>
+          )}
+          {/* Conditional Logic */}
+          {isSelected && field.type !== 'section' && (
+            <div style={{ gridColumn: '1 / span 2', marginTop: 4, padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: 2 }} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Show this question only if...</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <select value={field.showIf?.questionId || ''} onChange={e => updateField(field.id, 'showIf', e.target.value ? { ...field.showIf, questionId: e.target.value, operator: field.showIf?.operator || 'equals', value: field.showIf?.value || '' } : null)}
+                  style={{ ...inputStyle, width: 'auto', flex: 1, minWidth: 120, fontSize: 12 }} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+                  <option value="">Always show</option>
+                  {allQuestions.filter(q => q.id !== field.id && q.type !== 'section').map(q => (
+                    <option key={q.id} value={q.id}>{(q.text || 'Untitled').replace(/<[^>]+>/g, '').slice(0, 40)}</option>
+                  ))}
+                </select>
+                {field.showIf?.questionId && (<>
+                  <select value={field.showIf?.operator || 'equals'} onChange={e => updateField(field.id, 'showIf', { ...field.showIf, operator: e.target.value })}
+                    style={{ ...inputStyle, width: 'auto', fontSize: 12 }} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+                    <option value="equals">equals</option>
+                    <option value="not_equals">not equals</option>
+                    <option value="contains">contains</option>
+                    <option value="not_empty">is not empty</option>
+                  </select>
+                  {field.showIf?.operator !== 'not_empty' && (
+                    <input type="text" placeholder="value..." value={field.showIf?.value || ''} onChange={e => updateField(field.id, 'showIf', { ...field.showIf, value: e.target.value })}
+                      style={{ ...inputStyle, flex: 1, minWidth: 80, fontSize: 12 }} onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} />
+                  )}
+                </>)}
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -287,7 +328,7 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
                     {questions.map((q, idx) => (
-                      <SortableField key={q.id} field={q} idx={idx}
+                      <SortableField key={q.id} field={q} idx={idx} allQuestions={questions}
                         selectedId={selectedId} setSelectedId={setSelectedId}
                         updateField={updateField} deleteField={deleteField} duplicateField={duplicateField}
                         contentType={contentType} accent={accent} c={c} labelStyle={labelStyle} inputStyle={inputStyle} />

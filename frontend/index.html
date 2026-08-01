@@ -36,6 +36,7 @@
 
   <link rel="manifest" href="public/manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="WikiForms" />
 
   <meta property="og:type" content="website" />
@@ -59,7 +60,7 @@
   <meta name="theme-color" content="#3366cc" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#1a3a7a" media="(prefers-color-scheme: dark)" />
   
-  <meta name="generator" content="WikiForms v1.2.0" />
+  <meta name="generator" content="WikiForms v2.0.0" />
 
   <meta http-equiv="Accept-CH" content="Device-Memory, Downlink, ECT" />
 
@@ -252,13 +253,62 @@
 
   <script type="module">
     window.addEventListener('load', () => {
-      setTimeout(() => {
-        if (window.performance && window.performance.timing) {
-          const p = window.performance.timing;
-          const loadTime = p.loadEventEnd - p.navigationStart;
-          console.log(`%c🚀 WikiForms Loaded in: ${loadTime}ms`, "color: #3366cc; font-weight: bold;");
+      setTimeout(async () => {
+        const p = window.performance.timing;
+        const loadTime = p.loadEventEnd - p.navigationStart;
+        const paint = window.performance.getEntriesByType('paint');
+        const fcp = paint.find(e => e.name === 'first-contentful-paint');
+        const nav = window.performance.getEntriesByType('navigation')[0];
+
+        // Banner
+        console.log('%c                                    ', 'background:#3366cc;line-height:2px;padding:10px 60px;');
+        console.log('%c  📋 WikiForms  ✅  ', 'background:#3366cc;color:#fff;font-size:14px;font-weight:900;padding:6px 20px;');
+        console.log('%c                                    ', 'background:#3366cc;line-height:2px;padding:10px 60px;');
+        console.log('%c Wikimedia-native · Open Source · MIT ', 'color:#3366cc;font-size:11px;font-weight:600;');
+        console.log('');
+
+        // Performance
+        console.groupCollapsed('%c⚡ Performance', 'color:#00af89;font-weight:700;font-size:12px;');
+        console.log(`%c🚀 Total Load      %c${loadTime}ms`, 'color:#3366cc;font-weight:600;', loadTime < 2000 ? 'color:#00af89;font-weight:700;' : 'color:#f59e0b;font-weight:700;');
+        if (fcp) console.log(`%c🎨 First Paint     %c${Math.round(fcp.startTime)}ms`, 'color:#3366cc;font-weight:600;', fcp.startTime < 1000 ? 'color:#00af89;font-weight:700;' : 'color:#f59e0b;font-weight:700;');
+        if (nav) {
+          console.log(`%c🌐 DNS Lookup      %c${Math.round(nav.domainLookupEnd - nav.domainLookupStart)}ms`, 'color:#3366cc;font-weight:600;', 'color:#888;');
+          console.log(`%c🔗 TCP Connect     %c${Math.round(nav.connectEnd - nav.connectStart)}ms`, 'color:#3366cc;font-weight:600;', 'color:#888;');
+          console.log(`%c📦 DOM Interactive %c${Math.round(nav.domInteractive - nav.startTime)}ms`, 'color:#3366cc;font-weight:600;', 'color:#888;');
         }
-      }, 0);
+        console.groupEnd();
+
+        // Environment
+        console.groupCollapsed('%c🔧 Environment', 'color:#7c3aed;font-weight:700;font-size:12px;');
+        console.log(`%c📌 Version    %c2.0.0`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.log(`%c🖥️ Platform   %c${navigator.platform}`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.log(`%c🌍 Language   %c${navigator.language}`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.log(`%c🧵 Cores      %c${navigator.hardwareConcurrency || 'N/A'}`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.log(`%c💾 Memory     %c${navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'N/A'}`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.log(`%c📱 Touch      %c${navigator.maxTouchPoints > 0 ? 'Yes' : 'No'}`, 'color:#7c3aed;font-weight:600;', 'color:#888;');
+        console.groupEnd();
+
+        // API health check
+        console.groupCollapsed('%c🌐 API Status', 'color:#f59e0b;font-weight:700;font-size:12px;');
+        try {
+          const t0 = Date.now();
+          const r = await fetch('/api/test-connection', { headers: { 'Accept': 'application/json', 'Accept-Language': 'en' } });
+          const ping = Date.now() - t0;
+          const d = await r.json();
+          if (d.status === 'success') {
+            console.log(`%c✅ API Online  %c${ping}ms`, 'color:#00af89;font-weight:700;', ping < 300 ? 'color:#00af89;font-weight:700;' : 'color:#f59e0b;font-weight:700;');
+          } else {
+            console.log('%c⚠️ API Warning', 'color:#f59e0b;font-weight:700;');
+          }
+        } catch (e) {
+          console.log('%c❌ API Offline', 'color:#d92d20;font-weight:700;');
+        }
+        console.groupEnd();
+
+        console.log('');
+        console.log('%c🐛 Found a bug? → https://github.com/anafibnshahibul/WikiForms/issues', 'color:#888;font-size:11px;');
+        console.log('%c🔒 Security?   → wikiforms.toolforge.org/hall-of-fame.php', 'color:#888;font-size:11px;');
+      }, 100);
     });
   </script>
 

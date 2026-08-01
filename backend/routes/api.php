@@ -199,6 +199,41 @@ Route::middleware('throttle:20,1')->group(function () {
         return response()->json(['status' => 'success', 'questions' => $questions]);
     });
 
+    // Delete form — owner only
+    Route::delete('/delete-form/{slug}', function ($slug) {
+        $requester = resolveUser();
+        if (!$requester) return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+        $form = DB::table('forms')->where('slug', $slug)->first();
+        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found.'], 404);
+        if ($form->owner_username !== $requester) return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+        DB::table('form_responses')->where('form_slug', $slug)->delete();
+        DB::table('quiz_sessions')->where('form_slug', $slug)->delete();
+        DB::table('forms')->where('slug', $slug)->delete();
+        return response()->json(['status' => 'success']);
+    });
+
+    // Leaderboard — top 20 scored quiz submissions
+    Route::get('/leaderboard/{slug}', function ($slug) {
+        $form = DB::table('forms')->where('slug', $slug)->first();
+        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found.'], 404);
+        $rows = DB::table('form_responses')
+            ->where('form_slug', $slug)
+            ->whereNotNull('score')
+            ->orderByRaw("JSON_EXTRACT(score, '$.earned') DESC, JSON_EXTRACT(score, '$.total') DESC, created_at ASC")
+            ->limit(20)
+            ->get()
+            ->map(function ($r) {
+                $score = json_decode($r->score, true);
+                return [
+                    'username'  => $r->username ?? 'Anonymous',
+                    'earned'    => $score['earned'] ?? 0,
+                    'total'     => $score['total'] ?? 0,
+                    'timestamp' => $r->timestamp,
+                ];
+            });
+        return response()->json(['status' => 'success', 'leaderboard' => $rows]);
+    });
+
     Route::middleware('throttle:10,1')->post('/save-response', function (Request $request) {
         $v = $request->validate([
             'form_slug' => 'required|string',
@@ -224,12 +259,14 @@ Route::middleware('throttle:20,1')->group(function () {
             }
         }
 
+        $submitter = resolveUser() ?: ($v['username'] ?? null);
         DB::table('form_responses')->insert([
             'form_slug'  => $v['form_slug'],
             'title'      => $v['title'],
             'type'       => $v['type'],
             'answers'    => json_encode($v['answers']),
             'score'      => $score !== null ? json_encode($score) : null,
+            'username'   => $submitter,
             'timestamp'  => now()->toDateTimeString(),
             'created_at' => now(),
             'updated_at' => now(),
@@ -264,15 +301,38 @@ Route::middleware('throttle:20,1')->group(function () {
             return response()->json(['status' => 'error', 'message' => 'Forbidden: login required.'], 403);
         }
 
+        // Decrypt questions to build an id→text lookup map
+        $questionMap = [];
+        try {
+            $decrypted   = Crypt::decryptString($form->questions);
+            $questions   = json_decode($decrypted, true) ?? [];
+            foreach ($questions as $q) {
+                if (!empty($q['id'])) {
+                    // Strip HTML tags from question text for clean display
+                    $questionMap[$q['id']] = strip_tags($q['text'] ?? $q['id']);
+                }
+            }
+        } catch (\Exception $e) {}
+
         $responses = DB::table('form_responses')
             ->where('form_slug', $slug)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(fn($r) => [
-                'id'        => $r->id,
-                'answers'   => json_decode($r->answers, true),
-                'timestamp' => $r->timestamp,
-            ]);
+            ->map(function ($r) use ($questionMap) {
+                $raw     = json_decode($r->answers, true) ?? [];
+                $labeled = [];
+                foreach ($raw as $qId => $answer) {
+                    // Use question text as key, fall back to original ID if not found
+                    $raw_label = $questionMap[$qId] ?? $qId;
+                    $label = html_entity_decode(strip_tags($raw_label), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $labeled[$label] = $answer;
+                }
+                return [
+                    'id'        => $r->id,
+                    'answers'   => $labeled,
+                    'timestamp' => $r->timestamp,
+                ];
+            });
         return response()->json(['status' => 'success', 'responses' => $responses]);
     });
 

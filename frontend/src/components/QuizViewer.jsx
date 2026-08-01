@@ -1,4 +1,6 @@
 import { apiFetch } from '../api.js';
+import { evalCondition } from './FormBuilder.jsx';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import React, { useState, useEffect, useMemo } from 'react';
 import Icon from './Icon.jsx';
 
@@ -10,6 +12,19 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const [showResult, setShowResult] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [showResponses, setShowResponses] = useState(false);
+  const [viewTab, setViewTab] = useState('view');
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLB, setLoadingLB] = useState(false);
+
+  const loadLeaderboard = async () => {
+    setLoadingLB(true);
+    try {
+      const res = await fetch(`/api/leaderboard/${slug}`);
+      const data = await res.json();
+      if (data.status === 'success') setLeaderboard(data.leaderboard);
+    } catch (e) {}
+    setLoadingLB(false);
+  };
   const [responses, setResponses] = useState([]);
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -34,6 +49,16 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   const canEdit = isOwner || isCollaborator;
   const accent = isForm ? '#3366cc' : '#00af89';
   const resultTiming = remoteData?.result_timing || 'instant';
+
+  // Evaluate which fields are visible given current answers
+  const visibleFieldIds = useMemo(() => {
+    if (!fetchedQuestions) return new Set();
+    return new Set(
+      fetchedQuestions
+        .filter(q => evalCondition(q.showIf, answers))
+        .map(q => q.id || '')
+    );
+  }, [fetchedQuestions, answers]);
 
   const allFields = useMemo(() => {
     const raw = fetchedQuestions;
@@ -65,38 +90,45 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       .catch(() => {});
   }, [slug]);
 
-  // Start quiz session for heartbeat tracking
+  // Start quiz session + heartbeat in one effect to eliminate render-cycle delay.
+  // sessionIdRef lets the interval read the id without waiting for a second render.
+  const sessionIdRef = React.useRef(null);
   useEffect(() => {
     if (!isStarted || isForm || !slug) return;
+    let cancelled = false;
     fetch('/api/quiz/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ form_slug: slug, username: wikiUser?.username || 'anonymous' }),
     })
       .then(r => r.json())
-      .then(d => { if (d.session_id) setSessionId(d.session_id); })
+      .then(d => {
+        if (cancelled || !d.session_id) return;
+        sessionIdRef.current = d.session_id;
+        setSessionId(d.session_id);
+        heartbeatRef.current = setInterval(async () => {
+          if (!sessionIdRef.current) return;
+          try {
+            const res = await fetch('/api/quiz/heartbeat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionIdRef.current }),
+            });
+            const data = await res.json();
+            if (data.status === 'terminated') {
+              clearInterval(heartbeatRef.current);
+              setIsLocked(true);
+            }
+          } catch (e) {}
+        }, 3000);
+      })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+      clearInterval(heartbeatRef.current);
+    };
   }, [isStarted, isForm, slug]);
 
-  // Heartbeat loop — sends ping every 3 seconds
-  useEffect(() => {
-    if (!sessionId || isForm || submitted) return;
-    heartbeatRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/quiz/heartbeat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        });
-        const data = await res.json();
-        if (data.status === 'terminated') {
-          clearInterval(heartbeatRef.current);
-          setIsLocked(true);
-        }
-      } catch (e) {}
-    }, 3000);
-    return () => clearInterval(heartbeatRef.current);
-  }, [sessionId, isForm, submitted]);
 
   // Schedule status check + real-time auto-start
   useEffect(() => {
@@ -210,11 +242,11 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     let cur = { title: '', description: '', fields: [] };
     allFields.forEach(f => {
       if (f.type === 'section') { if (cur.fields.length > 0 || result.length > 0) result.push(cur); cur = { title: f.text, description: f.description, fields: [] }; }
-      else cur.fields.push(f);
+      else if (visibleFieldIds.has(f.id)) cur.fields.push(f);
     });
     result.push(cur);
     return result.filter(s => s.fields.length > 0 || s.title);
-  }, [allFields]);
+  }, [allFields, visibleFieldIds]);
 
   const finalSections = sections.length > 0 ? sections : [{ title: '', description: '', fields: [] }];
   const section = finalSections[currentSection] || finalSections[0];
@@ -285,7 +317,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
       const finalAnswers = { ...answers };
       const res = await apiFetch('/api/save-response', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ form_slug: slug, title: remoteData.title, type: remoteData.contentType || 'form', answers: finalAnswers }),
+        body: JSON.stringify({ form_slug: slug, title: remoteData.title, type: remoteData.contentType || 'form', answers: finalAnswers, username: wikiUser?.username || 'Anonymous' }),
       });
       if (!res.ok) { alert('Failed to submit.'); return; }
       const data = await res.json().catch(() => ({}));
@@ -315,7 +347,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     const border = hasError ? '1px solid #d92d20' : '1px solid var(--border)';
     const base = { width: '100%', padding: '10px 12px', border, borderRadius: '0', fontSize: '14px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none' };
     return (
-      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1.5px solid #d92d20' : '1px solid var(--border)', borderLeft: hasError ? '4px solid #d92d20' : '4px solid var(--border)', borderRadius: '0', padding: '20px 24px', marginBottom: '8px' }}>
+      <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1.5px solid #d92d20' : '1px solid var(--border)', borderLeft: hasError ? '4px solid #d92d20' : '4px solid var(--border)', borderRadius: '0', padding: '16px', marginBottom: '8px' }}>
         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
           {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
         </label>
@@ -408,7 +440,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${color}`, borderRadius: '2px', padding: '32px', textAlign: 'center', marginBottom: 20 }}>
             <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: 22 }}>{remoteData?.title}</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 24px' }}>{T('your_result')}</p>
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', border: `2px solid ${color}`, borderRadius: '2px', padding: '24px 48px', marginBottom: 24 }}>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', border: `2px solid ${color}`, borderRadius: '2px', padding: '20px 32px', marginBottom: 20 }}>
               <span style={{ fontSize: 48, fontWeight: 900, color, lineHeight: 1 }}>{score.earned}</span>
               <span style={{ fontSize: 16, color: 'var(--text-muted)', margin: '4px 0' }}>/ {score.total}</span>
               <span style={{ fontSize: 28, fontWeight: 800, color }}>{pct}%</span>
@@ -484,45 +516,219 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   // ===== START PAGE =====
   if (!isStarted) return (
     <div className="wikiform-container" style={{ marginTop: 32 }}>
-      <div className="wiki-card" style={{ borderTop: `4px solid ${accent}`, padding: '36px 32px', textAlign: 'center', position: 'relative' }}>
-        {canEdit && <button onClick={() => onEditForm(slug)} style={{ position: 'absolute', top: 16, right: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '7px 14px', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}><PencilIcon />{T('edit')}</button>}
-        {coverImageUrl && <img src={coverImageUrl} alt="Cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 2, marginBottom: 20 }} onError={e => { e.target.style.display = 'none'; }} />}
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>{remoteData?.title}</h1>
-        {remoteData?.description && <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 15, lineHeight: 1.6 }}>{remoteData.description}</p>}
-        {!isForm && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 2, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
-        <div>
-          {!fetchedQuestions
-            ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('preparing')}</p>
-            : <button className="wiki-btn" onClick={() => setIsStarted(true)} style={{ padding: '12px 40px', fontSize: 16, fontWeight: 700, backgroundColor: accent, borderColor: accent }}>{isForm ? T('start_form') : T('start_quiz')}</button>
+      {canEdit && (
+        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid var(--border-light)', background: 'var(--surface)', paddingLeft: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {['view', 'responses', ...(!isForm ? ['leaderboard'] : [])].map(tab => (
+            <button key={tab} onClick={() => { setViewTab(tab); if (tab === 'responses' && responses.length === 0) loadResponses(); if (tab === 'leaderboard' && leaderboard.length === 0) loadLeaderboard(); }}
+              style={{ padding: '10px 18px', border: 'none', background: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                color: viewTab === tab ? accent : 'var(--text-secondary)',
+                borderBottom: viewTab === tab ? `2px solid ${accent}` : '2px solid transparent',
+                marginBottom: '-2px', whiteSpace: 'nowrap' }}>
+              {tab === 'view' ? (isForm ? T('start_form') : 'Quiz') : tab === 'responses' ? T('responses') : '🏆 Leaderboard'}
+            </button>
+          ))}
+          <button onClick={() => onEditForm(slug)}
+            style={{ marginLeft: 'auto', marginRight: 8, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '6px 14px', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
+            <PencilIcon />{T('edit')}
+          </button>
+        </div>
+      )}
+
+      {(!canEdit || viewTab === 'view') && (
+        <div className="wiki-card" style={{ borderTop: `4px solid ${accent}`, padding: '36px 32px', textAlign: 'center' }}>
+          {coverImageUrl && <img src={coverImageUrl} alt="Cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 2, marginBottom: 20 }} onError={e => { e.target.style.display = 'none'; }} />}
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>{remoteData?.title}</h1>
+          {remoteData?.description && <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 15, lineHeight: 1.6 }}>{remoteData.description}</p>}
+          {!isForm && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 2, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
+          <div>
+            {!fetchedQuestions
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('preparing')}</p>
+              : <button className="wiki-btn" onClick={() => setIsStarted(true)} style={{ padding: '12px 40px', fontSize: 16, fontWeight: 700, backgroundColor: accent, borderColor: accent }}>{isForm ? T('start_form') : T('start_quiz')}</button>
+            }
+          </div>
+        </div>
+      )}
+
+      {viewTab === 'leaderboard' && !isForm && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', padding: '20px' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>🏆 Leaderboard</h3>
+          {loadingLB
+            ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading...</p>
+            : leaderboard.length === 0
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No scored submissions yet.</p>
+              : leaderboard.map((r, i) => {
+                  const pct = r.total > 0 ? Math.round((r.earned / r.total) * 100) : 0;
+                  const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+                  const barColor = pct >= 80 ? '#00af89' : pct >= 50 ? '#f59e0b' : '#d92d20';
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: i < 3 ? 22 : 14, fontWeight: 700, width: 32, textAlign: 'center', flexShrink: 0, color: 'var(--text-muted)' }}>{medal}</span>
+                      <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{r.username}</span>
+                      <div style={{ width: 100, background: 'var(--border-light)', height: 6, flexShrink: 0 }}>
+                        <div style={{ width: `${pct}%`, background: barColor, height: '100%', transition: 'width 0.5s ease' }} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: barColor, width: 50, textAlign: 'right', flexShrink: 0 }}>{r.earned}/{r.total}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', width: 36, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+                    </div>
+                  );
+                })
           }
         </div>
-      </div>
+      )}
 
-      {canEdit && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 2, marginTop: 16, overflow: 'hidden' }}>
-          <div onClick={() => { setShowResponses(p => !p); if (!showResponses) loadResponses(); }} style={{ padding: '14px 20px', background: 'var(--bg)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{T('responses')}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ transform: showResponses ? 'rotate(180deg)' : 'none', transition: '0.2s' }}><path d="m6 9 6 6 6-6"/></svg>
-          </div>
-          {showResponses && (
-            <div style={{ padding: '16px 20px' }}>
-              {loadingResponses
-                ? <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{T('loading')}</p>
-                : responses.length === 0
-                  ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('no_responses')}</p>
-                  : responses.map((r, i) => (
-                    <div key={r.id} style={{ border: '1px solid var(--border-light)', borderRadius: 2, padding: '14px 16px', marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>#{i + 1} — {r.timestamp}</div>
-                      {Object.entries(r.answers).filter(([k]) => k !== '__email__').map(([q, a], idx) => (
-                        <div key={idx} style={{ marginBottom: 6, fontSize: 14 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q}:</span>{' '}
-                          <span style={{ color: 'var(--text-secondary)' }}>{Array.isArray(a) ? a.join(', ') : (a || <i style={{ color: 'var(--text-muted)' }}>Empty</i>)}</span>
+      {canEdit && viewTab === 'responses' && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', padding: '20px' }}>
+          {loadingResponses
+            ? <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{T('loading')}</p>
+            : responses.length === 0
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('no_responses')}</p>
+              : (() => {
+                  const COLORS = ['#3366cc','#00af89','#f59e0b','#d92d20','#7c3aed','#0ea5e9','#10b981','#f97316'];
+                  // Build per-question aggregates
+                  const questionKeys = [...new Set(responses.flatMap(r => Object.keys(r.answers).filter(k => k !== '__email__')))];
+                  const aggregates = questionKeys.map(q => {
+                    const counts = {};
+                    responses.forEach(r => {
+                      const val = r.answers[q];
+                      if (!val) return;
+                      const vals = Array.isArray(val) ? val : [val];
+                      vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+                    });
+                    const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+                    const isChoice = entries.length <= 8 && entries.every(([k]) => k.length < 60);
+                    return { question: q, entries, isChoice };
+                  });
+
+                  return (
+                    <div>
+                      {/* Summary bar */}
+                      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '12px 20px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 28, fontWeight: 900, color: accent }}>{responses.length}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Total Responses</div>
+                        </div>
+                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '12px 20px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 28, fontWeight: 900, color: accent }}>{questionKeys.length}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Questions</div>
+                        </div>
+                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, padding: '12px 20px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 28, fontWeight: 900, color: '#00af89' }}>{responses[0]?.timestamp?.slice(0,10)}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Latest</div>
+                        </div>
+                        {/* Export buttons */}
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <button onClick={() => {
+                            // CSV export
+                            const headers = ['#', 'Timestamp', ...questionKeys];
+                            const rows = responses.map((r, i) => [
+                              i + 1,
+                              r.timestamp,
+                              ...questionKeys.map(q => {
+                                const val = r.answers[q] ?? '';
+                                return Array.isArray(val) ? val.join('; ') : val;
+                              })
+                            ]);
+                            const csv = [headers, ...rows].map(row =>
+                              row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+                            ).join('\n');
+                            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${slug}-responses.csv`;
+                            a.click();
+                          }} style={{ padding: '8px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            CSV
+                          </button>
+                          <button onClick={() => {
+                            // JSON export
+                            const data = responses.map((r, i) => ({
+                              '#': i + 1,
+                              timestamp: r.timestamp,
+                              answers: r.answers
+                            }));
+                            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${slug}-responses.json`;
+                            a.click();
+                          }} style={{ padding: '8px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            JSON
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Per-question charts */}
+                      {aggregates.map(({ question, entries, isChoice }, qi) => (
+                        <div key={qi} style={{ border: '1px solid var(--border-light)', borderRadius: 2, padding: '16px 20px', marginBottom: 16 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 16 }}>{question}</div>
+                          {entries.length === 0
+                            ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No answers yet</p>
+                            : isChoice ? (
+                              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+                                {/* Pie chart */}
+                                <ResponsiveContainer width={200} height={200}>
+                                  <PieChart>
+                                    <Pie data={entries.map(([name, value]) => ({ name, value }))} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ percent }) => `${Math.round(percent*100)}%`} labelLine={false}>
+                                      {entries.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip formatter={(v, n) => [v + ' responses', n]} />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                                {/* Legend */}
+                                <div style={{ flex: 1, minWidth: 120 }}>
+                                  {entries.map(([name, count], i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 13 }}>
+                                      <div style={{ width: 12, height: 12, borderRadius: 2, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                                      <span style={{ color: 'var(--text-primary)', fontWeight: 600, flex: 1 }}>{name}</span>
+                                      <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{count}</span>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>({Math.round(count/responses.length*100)}%)</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              /* Bar chart for text answers */
+                              <div>
+                                <ResponsiveContainer width="100%" height={Math.min(40 * entries.slice(0,10).length + 40, 300)}>
+                                  <BarChart data={entries.slice(0,10).map(([name, value]) => ({ name: name.length > 20 ? name.slice(0,20)+'…' : name, value, full: name }))} layout="vertical" margin={{ left: 8, right: 24 }}>
+                                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={140} />
+                                    <Tooltip formatter={(v, n, p) => [v + ' responses', p.payload.full]} />
+                                    <Bar dataKey="value" radius={[0,2,2,0]}>
+                                      {entries.slice(0,10).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    </Bar>
+                                  </BarChart>
+                                </ResponsiveContainer>
+                                {entries.length > 10 && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Showing top 10 of {entries.length} unique answers</p>}
+                              </div>
+                            )
+                          }
                         </div>
                       ))}
+
+                      {/* Raw responses toggle */}
+                      <details style={{ marginTop: 8 }}>
+                        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 13, color: 'var(--text-secondary)', padding: '10px 0' }}>View raw responses ({responses.length})</summary>
+                        <div style={{ marginTop: 10 }}>
+                          {responses.map((r, i) => (
+                            <div key={r.id} style={{ border: '1px solid var(--border-light)', borderRadius: 2, padding: '12px 16px', marginBottom: 8 }}>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>#{i + 1} — {r.timestamp}</div>
+                              {Object.entries(r.answers).filter(([k]) => k !== '__email__').map(([q, a], idx) => (
+                                <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q}:</span>{' '}
+                                  <span style={{ color: 'var(--text-secondary)' }}>{Array.isArray(a) ? a.join(', ') : (a || <i style={{ color: 'var(--text-muted)' }}>—</i>)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
                     </div>
-                  ))}
-            </div>
-          )}
+                  );
+                })()
+          }
         </div>
       )}
     </div>
@@ -530,8 +736,8 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
 
   // ===== QUIZ/FORM PAGE =====
   return (
-    <div className="wikiform-container" style={{ marginTop: 24, paddingBottom: 80 }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: 2, padding: '20px 28px', marginBottom: 14 }}>
+    <div className="wikiform-container" style={{ marginTop: 12, paddingBottom: 80 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderTop: `4px solid ${accent}`, borderRadius: 2, padding: '14px 16px', marginBottom: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{remoteData.title}</h1>
@@ -553,7 +759,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
         : section.fields.map((f, i) => renderField(f, i))
       }
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 10, padding: '0 4px' }}>
         {currentSection > 0 && <button className="wiki-btn-secondary" onClick={() => setCurrentSection(s => s - 1)} style={{ padding: '12px 28px' }}>{T('back')}</button>}
         <div style={{ marginLeft: 'auto' }}>
           {!isLastSection
