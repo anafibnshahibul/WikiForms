@@ -1,299 +1,246 @@
+<div align="center">
+
+<img src="https://wikiforms.toolforge.org/assets/favicon-hF1YpoPe.svg" width="72" height="72" alt="WikiForms Logo" />
+
 # WikiForms
 
-> An open-source, privacy-first form and quiz builder built specifically for the Wikimedia ecosystem.
+**Free · Open-Source · Wikimedia-Native**
 
-<table width="100%">
+A drag-and-drop form and quiz builder built specifically for the Wikimedia ecosystem.
+Log in with your Wikipedia account. No sign-up. No subscription. No tracking.
+
+[![Live](https://img.shields.io/badge/🌐_Live-wikiforms.toolforge.org-3366cc?style=flat-square)](https://wikiforms.toolforge.org)
+[![Docs](https://img.shields.io/badge/📖_API_Docs-docs.php-00af89?style=flat-square)](https://wikiforms.toolforge.org/docs.php)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=flat-square&logo=php&logoColor=white)](https://php.net)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![Toolforge](https://img.shields.io/badge/Hosted_on-Wikimedia_Toolforge-green?style=flat-square)](https://toolforge.org)
+
+<table>
   <tr>
-    <td width="33.3%" align="center">
-      <img src="Screenshots/Screenshot 2026-07-07 19.15.51.png" alt="WikiForms Interface Screenshot 1" width="100%" style="border-radius: 8px;" />
-    </td>
-    <td width="33.3%" align="center">
-      <img src="Screenshots/Screenshot 2026-07-07 19.16.01.png" alt="WikiForms Interface Screenshot 2" width="100%" style="border-radius: 8px;" />
-    </td>
-    <td width="33.3%" align="center">
-      <img src="Screenshots/Screenshot 2026-07-07 19.16.23.png" alt="WikiForms Interface Screenshot 3" width="100%" style="border-radius: 8px;" />
-    </td>
+    <td><img src="Screenshots/Screenshot 2026-07-07 19.15.51.png" width="280" alt="Form Builder" /></td>
+    <td><img src="Screenshots/Screenshot 2026-07-07 19.16.01.png" width="280" alt="Quiz View" /></td>
+    <td><img src="Screenshots/Screenshot 2026-07-07 19.16.23.png" width="280" alt="Dashboard" /></td>
   </tr>
 </table>
 
-<p align="left">
-  <a href="https://www.gnu.org/licenses/gpl-3.0.html"><img src="https://img.shields.io/badge/License-GNU%20GPLv3-green.svg" alt="License: GPL-3.0"></a>
-  <a href="https://wikitech.wikimedia.org/wiki/Portal:Toolforge"><img src="https://img.shields.io/badge/Hosted%20on-Toolforge-green.svg" alt="Toolforge"></a>
-  <a href="https://php.net"><img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white" alt="PHP 8.2+"></a>
-  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-18%2B-61DAFB.svg?logo=react&logoColor=black" alt="React 18+"></a>
-  <a href="https://wikipedia.org"><img src="https://img.shields.io/badge/Wikipedia-OAuth_2.0-000000.svg?logo=wikipedia&logoColor=white" alt="Wikipedia OAuth"></a>
-</p>
-
-🌐 **Live Application:** [wikiforms.toolforge.org](https://wikiforms.toolforge.org)  
-📂 **Source Code:** [github.com/anafibnshahibul/WikiForms](https://github.com/anafibnshahibul/WikiForms)  
-📖 **Documentation:** [wikiforms.toolforge.org/docs.php](https://wikiforms.toolforge.org/docs.php)
+</div>
 
 ---
 
-## 🌟 Overview
+## ✨ Features
 
-**WikiForms** empowers Wikipedia editors, researchers, and community managers to create custom forms and timed quizzes seamlessly without leaving the Wikimedia ecosystem. Built as a privacy-focused alternative to commercial form providers, WikiForms keeps community data secure, open, and free from third-party tracking.
-
-* **No Extra Credentials:** Authenticate directly using your existing Wikipedia account via OAuth 2.0.
-* **Privacy First:** Free from advertisements, commercial analytics, or third-party data tracking.
-* **Wikimedia Ready:** Embedded rich text capabilities with full support for interwiki linking.
-
----
-
-## ✨ Key Features
-
-| Feature | Details |
-| :--- | :--- |
-| **🔐 Native MediaWiki Auth** | Authenticate securely with MediaWiki OAuth 2.0—no passwords stored locally. |
-| **📋 Dynamic Form Builder** | Drag-and-drop interface supporting versatile input and question types. |
-| **🧠 Interactive Quiz Engine** | Point assignment, auto-grading support, and scheduled release windows. |
-| **🔒 Encrypted Questions** | End-to-end question configuration encryption using standard AES-256-CBC. |
-| **🌐 Native Multilingualism** | Full support for English, Bengali (বাংলা), Spanish (Español), and French (Français). |
-| **👥 Multi-User Collaboration** | Assign granular editing permissions to other Wikipedia community members. |
-| **🛡️ Academic Integrity** | Integrated focus tracking and tab-switch detection for interactive quizzes. |
+| | Feature | Details |
+|---|---|---|
+| 🔐 | **Wikipedia Login** | One-click OAuth 2.0 via MediaWiki — no passwords stored |
+| 📋 | **Drag & Drop Builder** | 10 question types: text, radio, checkbox, dropdown, star rating, true/false, and more |
+| 🧠 | **AI Quiz Grading** | Open-ended answers graded server-side by OpenRouter AI — correct answers never reach the client |
+| 🏆 | **Leaderboard** | Ranked quiz scores with medals, progress bars, and percentage display |
+| 🔒 | **AES-256-CBC Encryption** | All form questions encrypted at rest |
+| 🛡️ | **Anti-Cheat System** | Server-side heartbeat sessions, tab-switch detection, DevTools blocking |
+| 📊 | **Response Analytics** | Pie charts, bar charts, CSV/JSON export |
+| 🌐 | **Multilingual** | EN, BN, ES, FR, DE — community-contributed via the `/contribute` page |
+| 👥 | **Collaborators** | Share edit and response-view access with other Wikipedia users |
+| ⏱️ | **Scheduled Quizzes** | Auto start/end times with custom before/after messages |
+| 🔀 | **Conditional Logic** | Show/hide questions based on previous answers |
+| 🎨 | **Wikimedia Codex** | Built on the official Wikimedia design system |
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** React 18, Vite, CSS Modules
-* **Backend:** Laravel 11 (PHP 8.2+)
-* **Database:** MySQL / MariaDB (Wikimedia Toolforge Managed)
-* **Authentication:** MediaWiki OAuth 2.0 Provider
-* **Hosting Infrastructure:** Wikimedia Toolforge
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18 + Vite 8 |
+| **Backend** | Laravel 11 (PHP 8.2) |
+| **Database** | MySQL / MariaDB |
+| **Auth** | MediaWiki OAuth 2.0 |
+| **Web Server** | lighttpd (mirrors Toolforge exactly in Docker) |
+| **AI Grading** | OpenRouter API |
+| **Design** | Wikimedia Codex design system |
+| **Hosting** | Wikimedia Toolforge (Kubernetes) |
 
 ---
 
-## 🚀 Quick Start & Local Setup
-### Using Docker (Recommended)
+## 🚀 Quick Start
+
+### Docker (Recommended — mirrors Toolforge exactly)
 
 ```bash
-# Clone repository
-git clone [https://github.com/anafibnshahibul/WikiForms.git](https://github.com/anafibnshahibul/WikiForms.git)
+# 1. Clone
+git clone https://github.com/anafibnshahibul/WikiForms.git
 cd WikiForms
 
-# Launch containerized services
+# 2. Set up environment
+cp backend/.env.example backend/.env
+# Edit backend/.env — add your MediaWiki OAuth keys and OpenRouter key
+# DB credentials are pre-filled for local Docker (no changes needed)
+
+# 3. Start everything
 docker compose up -d --build
 
-# Run database migrations
-docker compose exec backend php artisan migrate
+# Done! Open http://localhost:8080
 ```
-## Manual Setup
-### Backend Setup
+
+On first run, Docker will automatically:
+- Start MySQL and create all tables (`docker/mysql/init.sql`)
+- Install Composer dependencies
+- Generate `APP_KEY` if missing
+- Run database migrations
+- Build the React frontend
+- Start lighttpd (same config as Toolforge production)
+
+### Manual Setup
+
+<details>
+<summary>Backend (Laravel)</summary>
+
 ```bash
 cd backend
 cp .env.example .env
 composer install
 php artisan key:generate
 php artisan migrate
-
-php artisan serve
+php artisan serve --port=8000
 ```
-## Frontend Setup
+</details>
+
+<details>
+<summary>Frontend (React + Vite)</summary>
+
 ```bash
 cd frontend
 npm install
 npm run dev
+# Runs on http://localhost:5173
 ```
-
-## 📡 Core API Summary
-
-Base Endpoint: `https://wikiforms.toolforge.org/api`
-
-| Method | Endpoint | Description | Access |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/test-connection` | Service availability & status check | Public |
-| `GET` | `/auth/mediawiki` | Initiate MediaWiki OAuth handshake | Public |
-| `POST` | `/save-form` | Create or update form payload | Authenticated |
-| `GET` | `/get-form/{slug}` | Fetch form metadata and setup | Public |
-| `POST` | `/save-response` | Submit completed form entry | Public / Auth |
-| `GET` | `/get-responses/{slug}` | Extract form submission records | Form Owner |
-| `POST` | `/grade-response` | Execute AI assessment via OpenRouter | Form Owner |
-
-For comprehensive payload specs and schema details, visit our [Full API Documentation](https://wikiforms.toolforge.org/docs.php).
+</details>
 
 ---
 
-## 🛡️ Security & Privacy Policy
+## 📡 API Reference
 
-WikiForms strictly complies with the [Wikimedia Cloud Services Terms of Use](https://wikitech.wikimedia.org/wiki/Wikitech:Cloud_Services_Terms_of_use).
+Base URL: `https://wikiforms.toolforge.org/api`
 
-* **Zero Tracking:** No personal identity vectors or external behavioral trackers are collected.
-* **Vulnerability Reporting:** To report security concerns, contact us via the [Wikipedia User Talk Page](https://en.wikipedia.org/wiki/User_talk:Anaf_Ibn_Shahibul).
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/test-connection` | — | Health check |
+| `GET` | `/auth/mediawiki` | — | Start OAuth login |
+| `GET` | `/auth/me` | — | Get current user |
+| `POST` | `/save-form` | ✅ | Create/update form |
+| `GET` | `/get-form/{slug}` | — | Get form metadata |
+| `POST` | `/get-form-questions/{slug}` | — | Get questions (correctAnswer stripped for non-owners) |
+| `POST` | `/save-response` | — | Submit response (quiz: server-side grading included) |
+| `GET` | `/get-responses/{slug}` | ✅ Owner | Get all responses |
+| `GET` | `/leaderboard/{slug}` | — | Top 20 quiz scores |
+| `POST` | `/grade-response` | — | AI grading (OpenRouter) |
+| `POST` | `/quiz/start` | — | Start anti-cheat session |
+| `POST` | `/quiz/heartbeat` | — | Heartbeat ping (every 3s) |
+| `POST` | `/quiz/validate-session` | — | Validate before submission |
+| `POST` | `/add-collaborator` | ✅ Owner | Add collaborator |
+| `POST` | `/remove-collaborator` | ✅ Owner | Remove collaborator |
+| `DELETE` | `/delete-form/{slug}` | ✅ Owner | Delete form + all responses |
+| `GET` | `/usr-lang/{lang}` | — | Get translations (cached 10min) |
+| `POST` | `/editor` | ✅ | Save draft translation |
+| `POST` | `/publisher` | ✅ Contributor | Publish own translation |
+
+Full docs: [wikiforms.toolforge.org/docs.php](https://wikiforms.toolforge.org/docs.php)
 
 ---
 
-## 📁 Repository Structure
+## 🔒 Security
 
-> 💡 The full repository directory tree is automatically generated and updated via GitHub Actions.  
-> You can view the live file structure in [`.github/workflows/file-tree.md`](.github/workflows/file-tree.md).
+WikiForms implements multiple security layers:
 
-```text
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── README.md
-├── SECURITY.md
-├── Screenshots
-│   ├── Screenshot 2026-07-07 19.15.51.png
-│   ├── Screenshot 2026-07-07 19.16.01.png
-│   └── Screenshot 2026-07-07 19.16.23.png
-├── backend
-│   ├── Dockerfile
-│   ├── README.md
-│   ├── app
-│   │   ├── Http
-│   │   │   └── Controllers
-│   │   │       ├── Controller.php
-│   │   │       ├── GradingController.php
-│   │   │       └── WikiAuthController.php
-│   │   ├── Models
-│   │   │   ├── Quiz.php
-│   │   │   ├── QuizResponse.php
-│   │   │   └── User.php
-│   │   └── Providers
-│   │       └── AppServiceProvider.php
-│   ├── artisan
-│   ├── bootstrap
-│   │   ├── app.php
-│   │   ├── cache
-│   │   └── providers.php
-│   ├── composer.json
-│   ├── composer.lock
-│   ├── config
-│   │   ├── app.php
-│   │   ├── auth.php
-│   │   ├── cache.php
-│   │   ├── database.php
-│   │   ├── filesystems.php
-│   │   ├── logging.php
-│   │   ├── mail.php
-│   │   ├── queue.php
-│   │   ├── sanctum.php
-│   │   ├── services.php
-│   │   └── session.php
-│   ├── database
-│   │   ├── factories
-│   │   │   └── UserFactory.php
-│   │   ├── migrations
-│   │   │   ├── 0001_01_01_000000_create_users_table.php
-│   │   │   ├── 0001_01_01_000001_create_cache_table.php
-│   │   │   ├── 0001_01_01_000002_create_jobs_table.php
-│   │   │   ├── 2026_06_02_144159_create_personal_access_tokens_table.php
-│   │   │   ├── 2026_06_02_145225_create_quizzes_table.php
-│   │   │   ├── 2026_06_02_151323_create_quiz_responses_table.php
-│   │   │   ├── 2026_06_04_061022_create_forms_table.php
-│   │   │   ├── 2026_06_16_000001_add_collaborators_to_forms_table.php
-│   │   │   └── 2026_06_16_000002_add_timer_to_forms.php
-│   │   └── seeders
-│   │       └── DatabaseSeeder.php
-│   ├── package.json
-│   ├── phpunit.xml
-│   ├── public
-│   │   ├── favicon.ico
-│   │   ├── index.php
-│   │   └── robots.txt
-│   ├── resources
-│   │   ├── css
-│   │   │   └── app.css
-│   │   ├── js
-│   │   │   ├── app.js
-│   │   │   └── bootstrap.js
-│   │   └── views
-│   │       └── welcome.blade.php
-│   ├── routes
-│   │   ├── api.php
-│   │   ├── api.php.bak
-│   │   ├── console.php
-│   │   └── web.php
-│   ├── server.js
-│   ├── storage
-│   │   ├── app
-│   │   │   ├── private
-│   │   │   └── public
-│   │   ├── framework
-│   │   │   ├── cache
-│   │   │   │   └── data
-│   │   │   ├── sessions
-│   │   │   ├── testing
-│   │   │   └── views
-│   │   └── logs
-│   ├── tests
-│   │   ├── Feature
-│   │   │   └── ExampleTest.php
-│   │   ├── TestCase.php
-│   │   └── Unit
-│   │       └── ExampleTest.php
-│   └── vite.config.js
-├── clean_cache.py
-├── deploy.sh
-├── docker-compose.yml
-├── frontend
-│   ├── Dockerfile
-│   ├── README.md
-│   ├── deploy.sh
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── public
-│   │   ├── agents.txt
-│   │   ├── browserconfig.xml
-│   │   ├── capabilities.xml
-│   │   ├── clientaccesspolicy.xml
-│   │   ├── crossdomain.xml
-│   │   ├── docs.php
-│   │   ├── favicon.svg
-│   │   ├── fonts
-│   │   │   └── inter-400.woff2
-│   │   ├── hall-of-fame.html
-│   │   ├── hall-of-fame.php
-│   │   ├── humans.txt
-│   │   ├── icons.svg
-│   │   ├── keybase.txt
-│   │   ├── lgappxml.xml
-│   │   ├── llms.txt
-│   │   ├── manifest.json
-│   │   ├── opensearch-style.xsl
-│   │   ├── opensearch.xml
-│   │   ├── pgp-key.txt
-│   │   ├── robots.txt
-│   │   ├── security-policy.html
-│   │   ├── security-report.xml
-│   │   ├── security-report.xsl
-│   │   ├── sitemap.xml
-│   │   └── style.xsl
-│   ├── src
-│   │   ├── App.css
-│   │   ├── App.jsx
-│   │   ├── api.js
-│   │   ├── components
-│   │   │   ├── AboutPage.jsx
-│   │   │   ├── ContributeEditor.jsx
-│   │   │   ├── Footer.jsx
-│   │   │   ├── FormBuilder.jsx
-│   │   │   ├── Header.jsx
-│   │   │   ├── Icon.jsx
+- **AES-256-CBC** question encryption at rest
+- **MediaWiki OAuth 2.0** — no passwords stored
+- **DB-backed token auth** (64-char hex, 30-day expiry)
+- **Origin enforcement** — unauthorized cross-origin requests blocked (error 677)
+- **Bot/scanner blocking** — sqlmap, nikto, nmap, wget, curl, python-requests, etc.
+- **Rate limiting** — 20 req/min global, 5/min AI grading, 10/min submissions
+- **Request size limit** — 1MB max
+- **Server-side quiz grading** — correct answers never reach the client
+- **Anti-cheat** — heartbeat sessions, tab-switch detection, DevTools blocking
+- **Input validation** — slug regex, enum checks, URL validation on every endpoint
+- **HTTPS-only cookies** — httpOnly, SameSite=lax
+
+Found a vulnerability? See our [Security Hall of Fame](https://wikiforms.toolforge.org/hall-of-fame.php).
+
+---
+
+## 🌍 Translations
+
+WikiForms is available in:
+
+| Language | Code | Coverage |
+|---|---|---|
+| English | `en` | 100% (97 keys) |
+| বাংলা (Bengali) | `bn` | 100% (97 keys) |
+| Español | `es` | 74% (72 keys) |
+| Français | `fr` | 74% (72 keys) |
+| Deutsch | `de` | 22% (21 keys) |
+
+Want to add your language? Visit [/contribute](https://wikiforms.toolforge.org/contribute) — any Wikipedia user can contribute translations.
+
+---
+
+## 📁 Project Structure
+
+```
+WikiForms/
+├── backend/                    # Laravel 11 API
+│   ├── app/Http/Controllers/
+│   │   ├── GradingController.php   # AI grading (OpenRouter)
+│   │   └── WikiAuthController.php  # MediaWiki OAuth 2.0
+│   ├── routes/api.php              # All API routes
+│   └── .env.example
+├── frontend/                   # React 18 + Vite SPA
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── FormBuilder.jsx     # Drag-and-drop builder + conditional logic
+│   │   │   ├── QuizViewer.jsx      # Quiz/form renderer + anti-cheat
 │   │   │   ├── MyFormsDashboard.jsx
-│   │   │   ├── PrivacyPage.jsx
-│   │   │   ├── QuizViewer.jsx
-│   │   │   ├── RichTextEditor.jsx
-│   │   │   ├── TermsPage.jsx
-│   │   │   └── WelcomeScreen.jsx
-│   │   ├── i18n.js
-│   │   ├── index.css
-│   │   └── main.jsx
-│   └── vite.config.js
-├── jobs.yaml
-├── package-lock.json
-├── package.json
-├── service.manifest
-└── toolinfo.json
+│   │   │   ├── ContributeEditor.jsx
+│   │   │   └── Header.jsx
+│   │   ├── App.css                 # Wikimedia Codex design tokens
+│   │   └── i18n.js                 # Translation loader
+│   └── public/                     # Static files
+├── docker/
+│   ├── lighttpd/
+│   │   ├── Dockerfile
+│   │   └── .lighttpd.conf           # Mirrors Toolforge production exactly
+│   └── mysql/
+│       └── init.sql                # Full schema — auto-runs on first start
+├── docker-compose.yml
+└── deploy.sh                       # Toolforge deploy script
 ```
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'Add my feature'`
+4. Push and open a Pull Request
+
+For translation contributions, use the [/contribute](https://wikiforms.toolforge.org/contribute) page directly.
+
+Bug reports → [GitHub Issues](https://github.com/anafibnshahibul/WikiForms/issues)  
+Security reports → [Wikipedia Talk Page](https://en.wikipedia.org/wiki/User_talk:Anaf_Ibn_Shahibul)
 
 ---
 
 ## 📄 License
 
-* **Source Code:** Released under the [GNU General Public License v3.0](LICENSE).
-* **Documentation & Media:** Licensed under [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
+- **Source Code** — [MIT License](LICENSE)
+- **Documentation & Media** — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+---
+
+<div align="center">
+
+Built with ❤️ by [Anaf Ibn Shahibul](https://en.wikipedia.org/wiki/User:Anaf_Ibn_Shahibul)  
+Hosted on [Wikimedia Toolforge](https://toolforge.org) · Part of the open knowledge community
+
+</div>
