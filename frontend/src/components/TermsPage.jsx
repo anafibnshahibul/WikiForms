@@ -62,7 +62,7 @@ function TermsPage({ T, lang }) {
         </Section>
 
         <Section title="8. Intellectual Property">
-          <P>Source code: <a href="https://opensource.org/licenses/MIT" style={{ color: '#3366cc' }}>MIT License</a> · Documentation: <a href="https://creativecommons.org/licenses/by-sa/4.0/" style={{ color: '#3366cc' }}>CC BY-SA 4.0</a>.</P>
+          <P>Source code: <a href="https://opensource.org/licenses/GPL-3.0" style={{ color: '#3366cc' }}>GNU General Public License v3.0</a> · Documentation: <a href="https://www.gnu.org/licenses/gpl-3.0.html" style={{ color: '#3366cc' }}>GPL-3.0</a>.</P>
         </Section>
 
         <Section title="9. Contact">

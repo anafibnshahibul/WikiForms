@@ -249,7 +249,7 @@ $base    = 'https://wikiforms.toolforge.org';
         <span class="chip">v<?= $version ?></span>
         <span class="chip">JSON only</span>
         <span class="chip">MediaWiki OAuth 2.0</span>
-        <span class="chip chip-green">Open Source · MIT</span>
+        <span class="chip chip-green">Open Source · GPL-3.0</span>
       </div>
     </div>
 
@@ -1093,8 +1093,8 @@ window.<span class="fn">addEventListener</span>(<span class="str">'message'</spa
     </div>
 
     <p style="margin-top:56px;font-size:12px;color:var(--muted);text-align:center;padding-bottom:32px">
-      WikiForms v<?= $version ?> — Open Source — MIT License —
-      <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> ·
+      WikiForms v<?= $version ?> — Open Source — GNU General Public License v3.0 —
+      <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a> ·
       <a href="https://github.com/anafibnshahibul/WikiForms">GitHub</a> ·
       <a href="/hall-of-fame.php">Security Hall of Fame</a>
     </p>

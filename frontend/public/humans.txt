@@ -10,5 +10,5 @@
     Standards: JavaScript, JavaScript XML, Node.js, PHP, HTML5, CSS3
     Software: Lighttpd
     Hosting: Toolforge Hosted
-    License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-    Link to License: https://creativecommons.org/licenses/by-sa/4.0/
+    License: Creative Commons Attribution-ShareAlike 4.0 International (GPL-3.0)
+    Link to License: https://www.gnu.org/licenses/gpl-3.0.html

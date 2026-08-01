@@ -429,7 +429,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
   </>
   );
 
-  // ===== SUBMITTED PAGE =====
+  // ===== SUBGPL-3.0TED PAGE =====
   if (submitted) {
     if (showResult && score !== null) {
       const gradable = allFields.filter(q => revealedAnswers[q.id]?.correctAnswer || (q.correctAnswer && q.correctAnswer.trim() !== ''));

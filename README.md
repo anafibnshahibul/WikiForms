@@ -11,7 +11,7 @@ Log in with your Wikipedia account. No sign-up. No subscription. No tracking.
 
 [![Live](https://img.shields.io/badge/🌐_Live-wikiforms.toolforge.org-3366cc?style=flat-square)](https://wikiforms.toolforge.org)
 [![Docs](https://img.shields.io/badge/📖_API_Docs-docs.php-00af89?style=flat-square)](https://wikiforms.toolforge.org/docs.php)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL-3.0-green?style=flat-square)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=flat-square&logo=php&logoColor=white)](https://php.net)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![Toolforge](https://img.shields.io/badge/Hosted_on-Wikimedia_Toolforge-green?style=flat-square)](https://toolforge.org)
@@ -233,8 +233,8 @@ Security reports → [Wikipedia Talk Page](https://en.wikipedia.org/wiki/User_ta
 
 ## 📄 License
 
-- **Source Code** — [MIT License](LICENSE)
-- **Documentation & Media** — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- **Source Code** — [GNU General Public License v3.0](LICENSE)
+- **Documentation & Media** — [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)
 
 ---
 
