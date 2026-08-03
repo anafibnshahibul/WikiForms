@@ -24,8 +24,9 @@ function Footer({ lang, T }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <p style={{ margin: 0, textAlign: 'center', flex: 1 }}>
             Available under{' '}
-            <a href="https://www.gnu.org/licenses/gpl-3.0.html" style={{ color: '#3366cc' }}>GPL-3.0</a>
-            {' '}(docs) · GPL-3.0 license(code) · Hosted on{' '}
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/" style={{ color: '#3366cc' }}> Creative Commons Attribution-ShareAlike License</a>
+            {' '}(docs) ·<a href="https://www.gnu.org/licenses/gpl-3.0.html" style={{ color: '#3366cc' }}>GPL-3.0</a>
+            {' '}(code) · Hosted on{' '}
             <a href="https://wikitech.wikimedia.org/wiki/Portal:Toolforge" style={{ color: '#3366cc' }}>Wikimedia Toolforge</a>
           </p>
           <a href="https://wikimediafoundation.org" target="_blank" rel="noopener noreferrer"
