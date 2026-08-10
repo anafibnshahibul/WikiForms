@@ -472,7 +472,20 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
                     </div>
                     {ua && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 0' }}>{T('your_answer_label')}<strong style={{ color: 'var(--text-secondary)' }}>{ua}</strong></p>}
                     {!isCorrect && correctAnswer && <p style={{ fontSize: 13, color: '#00af89', margin: '6px 0 0' }}>{T('correct_answer_label') || 'Correct answer: '}<strong>{correctAnswer}</strong></p>}
-                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }}>{feedback}</p>}
+                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }} dangerouslySetInnerHTML={{ __html: feedback }} />}
+                    {!isCorrect && (() => {
+                      const desc = revealed.description || q.description || '';
+                      const wdMatch = desc.match(/wikidata\.org\/wiki\/(Q\d+)/);
+                      if (!wdMatch) return null;
+                      const qid = wdMatch[1];
+                      return (
+                        <a href={`https://www.wikidata.org/wiki/${qid}`} target="_blank" rel="noreferrer"
+                          style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:8, padding:'4px 10px', background:'#eaf3ff', border:'1px solid #3366cc33', borderRadius:2, fontSize:11, fontWeight:600, color:'#3366cc', textDecoration:'none' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10z"/></svg>
+                          Learn more on Wikidata ({qid}) ↗
+                        </a>
+                      );
+                    })()}
                   </div>
                 );
               })}

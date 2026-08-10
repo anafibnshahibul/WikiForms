@@ -153,7 +153,17 @@ function App() {
     }, 500);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Invalidate token server-side first
+    try {
+      const user = JSON.parse(localStorage.getItem('wf_user') || '{}');
+      if (user.auth_token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'X-WF-Token': user.auth_token, 'Content-Type': 'application/json', 'Accept': 'application/json', 'Accept-Language': 'en' },
+        });
+      }
+    } catch (e) {}
     setWikiUser(null);
     localStorage.removeItem('wf_user');
   };

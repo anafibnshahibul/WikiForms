@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import WikiMediaPanel from './WikiMediaPanel.jsx';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import RichTextEditor from './RichTextEditor';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -36,7 +37,7 @@ const Toggle = ({ checked, onChange }) => (
   </div>
 );
 
-function SortableField({ field, idx, selectedId, setSelectedId, updateField, deleteField, duplicateField, contentType, accent, c, labelStyle, inputStyle, allQuestions = [] }) {
+function SortableField({ field, idx, selectedId, setSelectedId, updateField, deleteField, duplicateField, contentType, accent, c, labelStyle, inputStyle, allQuestions = [], onSetCoverImage }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
@@ -61,6 +62,7 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
   }
 
   const isSelected = selectedId === field.id;
+  const [showWikiMedia, setShowWikiMedia] = useState(false);
 
   return (
     <div ref={setNodeRef} style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '2px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none' }}
@@ -82,6 +84,10 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
           </div>
         </div>
         <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }} onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <button onClick={e => { e.stopPropagation(); setShowWikiMedia(w => !w); }}
+            title="Wikimedia Integration" style={{ border: '1px solid #3366cc44', background: showWikiMedia ? '#eaf3ff' : 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '2px', color: '#3366cc' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </button>
           <button onClick={e => { e.stopPropagation(); duplicateField(field); }}
             style={{ border: '1px solid var(--border-light)', background: 'var(--surface)', cursor: 'pointer', padding: '5px 7px', borderRadius: '2px', color: 'var(--text-secondary)' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -165,6 +171,15 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
             </div>
           )}
         </div>
+      )}
+      {showWikiMedia && (
+        <WikiMediaPanel
+          field={field}
+          updateField={updateField}
+          contentType={contentType}
+          onClose={() => setShowWikiMedia(false)}
+          onSetCoverImage={onSetCoverImage}
+        />
       )}
     </div>
   );
@@ -331,7 +346,8 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
                       <SortableField key={q.id} field={q} idx={idx} allQuestions={questions}
                         selectedId={selectedId} setSelectedId={setSelectedId}
                         updateField={updateField} deleteField={deleteField} duplicateField={duplicateField}
-                        contentType={contentType} accent={accent} c={c} labelStyle={labelStyle} inputStyle={inputStyle} />
+                        contentType={contentType} accent={accent} c={c} labelStyle={labelStyle} inputStyle={inputStyle}
+                        onSetCoverImage={setCoverImage} />
                     ))}
                   </SortableContext>
                 </DndContext>

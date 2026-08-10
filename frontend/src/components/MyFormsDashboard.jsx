@@ -45,6 +45,46 @@ function MyFormsDashboard({ T, wikiUser, onLogin, onEditForm, onSelectType, onNa
   const [search, setSearch]     = useState('');
   const [deleting, setDeleting] = useState(null);
   const [confirmSlug, setConfirmSlug] = useState('');
+  const [showBadge, setShowBadge] = useState(false);
+  const [badgeCopied, setBadgeCopied] = useState(false);
+
+  const generateBadgeWikitext = () => {
+    const quizCount  = forms.filter(f => f.content_type === 'quiz').length;
+    const formCount  = forms.filter(f => f.content_type === 'form').length;
+    const totalResp  = forms.reduce((s, f) => s + (f.response_count || 0), 0);
+    return `{{userbox
+| border-c    = #3366cc
+| border-s    = 2
+| id-c        = #3366cc
+| id-s        = 14
+| id-fc       = white
+| id          = [[File:WikiForms logo.svg|40px|link=https://wikiforms.toolforge.org]]
+| info-c      = #eaf3ff
+| info-s      = 8
+| info        = This user creates forms & quizzes on '''[[Wikimedia:WikiForms|WikiForms]]'''.<br/><small>📋 ${formCount} forms · 🧠 ${quizCount} quizzes · 📨 ${totalResp} responses</small>
+}}`;
+  };
+
+  const generateBadgeHTML = () => {
+    const quizCount = forms.filter(f => f.content_type === 'quiz').length;
+    const formCount = forms.filter(f => f.content_type === 'form').length;
+    const totalResp = forms.reduce((s, f) => s + (f.response_count || 0), 0);
+    return `<div style="border:2px solid #3366cc;border-radius:4px;display:inline-flex;align-items:center;gap:10px;padding:8px 14px;background:#eaf3ff;font-family:sans-serif;font-size:13px;max-width:320px">
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M6 3C4.34 3 3 4.34 3 6V26C3 27.66 4.34 29 6 29H26C27.66 29 29 27.66 29 26V6C29 4.34 27.66 3 26 3H6Z" fill="#3366cc"/><path d="M9 10L12 21L15 13L18 21L21 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="23" r="5" fill="#00af89"/><path d="M21 23L22.5 24.5L25 21.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div>
+    <div style="font-weight:700;color:#3366cc">WikiForms Contributor</div>
+    <div style="color:#54595d;margin-top:2px">📋 ${formCount} forms · 🧠 ${quizCount} quizzes · 📨 ${totalResp} responses</div>
+    <a href="https://wikiforms.toolforge.org" style="color:#3366cc;font-size:11px">wikiforms.toolforge.org</a>
+  </div>
+</div>`;
+  };
+
+  const copyBadge = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setBadgeCopied(true);
+      setTimeout(() => setBadgeCopied(false), 2000);
+    });
+  };
 
   const handleDelete = async (slug) => {
     if (confirmSlug !== slug) return;
@@ -116,12 +156,79 @@ function MyFormsDashboard({ T, wikiUser, onLogin, onEditForm, onSelectType, onNa
             <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', display:'flex', alignItems:'center', gap:8 }}><Icon name='forms' size={20} color='#3366cc'/> My Forms</h1>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>Welcome back, <b>{wikiUser.username}</b></p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setShowBadge(b => !b)} className="wiki-btn-secondary" style={{ padding: '8px 16px', fontSize: 13 }}>🏅 My Badge</button>
             <button onClick={() => onSelectType('form')} className="wiki-btn-secondary" style={{ padding: '8px 16px', fontSize: 13 }}>+ New Form</button>
             <button onClick={() => onSelectType('quiz')} className="wiki-btn" style={{ padding: '8px 16px', fontSize: 13, backgroundColor: '#00af89', borderColor: '#00af89' }}>+ New Quiz</button>
           </div>
         </div>
       </div>
+
+      {/* Wikipedia Badge Panel */}
+      {showBadge && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: '4px solid #3366cc', borderRadius: 2, padding: '20px 24px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>🏅 Your WikiForms Badge</h3>
+            <button onClick={() => setShowBadge(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>×</button>
+          </div>
+
+          {/* Live preview */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Preview</div>
+            <div style={{ border: '2px solid #3366cc', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#eaf3ff', fontFamily: 'sans-serif' }}>
+              <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+                <path d="M6 3C4.34 3 3 4.34 3 6V26C3 27.66 4.34 29 6 29H26C27.66 29 29 27.66 29 26V6C29 4.34 27.66 3 26 3H6Z" fill="#3366cc"/>
+                <path d="M9 10L12 21L15 13L18 21L21 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="23" cy="23" r="5" fill="#00af89"/>
+                <path d="M21 23L22.5 24.5L25 21.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div>
+                <div style={{ fontWeight: 700, color: '#3366cc', fontSize: 14 }}>WikiForms Contributor</div>
+                <div style={{ color: '#54595d', fontSize: 12, marginTop: 2 }}>
+                  📋 {forms.filter(f => f.content_type === 'form').length} forms ·{' '}
+                  🧠 {forms.filter(f => f.content_type === 'quiz').length} quizzes ·{' '}
+                  📨 {forms.reduce((s, f) => s + (f.response_count || 0), 0)} responses
+                </div>
+                <a href="https://wikiforms.toolforge.org" style={{ color: '#3366cc', fontSize: 11 }}>wikiforms.toolforge.org</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Wikitext */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Wikipedia Userbox (paste on your user page)
+              </div>
+              <button onClick={() => copyBadge(generateBadgeWikitext())}
+                style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', background: badgeCopied ? '#00af89' : 'var(--bg)', color: badgeCopied ? 'white' : 'var(--text-primary)', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+                {badgeCopied ? '✅ Copied!' : '📋 Copy'}
+              </button>
+            </div>
+            <textarea readOnly value={generateBadgeWikitext()}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 2, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg)', color: 'var(--text-primary)', resize: 'vertical', minHeight: 120, boxSizing: 'border-box' }} />
+          </div>
+
+          {/* HTML badge */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                HTML Badge (for websites, GitHub, etc.)
+              </div>
+              <button onClick={() => copyBadge(generateBadgeHTML())}
+                style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+                📋 Copy
+              </button>
+            </div>
+            <textarea readOnly value={generateBadgeHTML()}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 2, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg)', color: 'var(--text-primary)', resize: 'vertical', minHeight: 80, boxSizing: 'border-box' }} />
+          </div>
+
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '12px 0 0' }}>
+            💡 To add to your Wikipedia user page: go to <a href={`https://en.wikipedia.org/wiki/User:${wikiUser?.username}`} target="_blank" rel="noreferrer" style={{ color: '#3366cc' }}>your user page</a> → Edit → paste the Wikitext above.
+          </p>
+        </div>
+      )}
 
       {/* Temporary reset notice */}
       {showResetNotice && (

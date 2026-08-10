@@ -18,9 +18,45 @@ $ua = strtolower(request()->header('User-Agent', ''));
 $blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra', 'python-requests', 'go-http-client', 'java/', 'libwww', 'lwp-', 'wget/', 'curl/'];
 foreach ($blockedAgents as $bot) {
     if (str_contains($ua, $bot)) {
+        trackSuspicious();
         return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
     }
 }
+
+// 3. Ban IPs that probed honeypot endpoints (3+ hits = scanner)
+$_honeypotHits = (int) cache()->get('honeypot_' . md5(request()->ip()), 0);
+if ($_honeypotHits >= 3) {
+    return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+}
+
+// 4. Block IPs with too many suspicious requests (>50/hour)
+$_suspKey   = 'wf_suspicious_' . md5(request()->ip());
+$_suspCount = (int) cache()->get($_suspKey, 0);
+if ($_suspCount > 50) {
+    \Illuminate\Support\Facades\Log::warning('Suspicious IP auto-blocked', [
+        'ip'    => request()->ip(),
+        'ua'    => request()->userAgent(),
+        'count' => $_suspCount,
+    ]);
+    return response()->json(['status' => 'error', 'message' => 'Too many suspicious requests.'], 429);
+}
+
+// 5. Honeypot routes — scanners always probe these
+Route::any('/wp-admin',      fn() => abort(404));
+Route::any('/wp-login.php',  fn() => abort(404));
+Route::any('/.env',          fn() => abort(404));
+Route::any('/phpmyadmin',    fn() => abort(404));
+Route::any('/setup.php',     fn() => abort(404));
+Route::any('/xmlrpc.php',    fn() => abort(404));
+Route::any('/admin',  function () {
+    $key  = 'honeypot_' . md5(request()->ip());
+    $hits = (int) cache()->get($key, 0) + 1;
+    cache()->put($key, $hits, 3600);
+    \Illuminate\Support\Facades\Log::warning('Honeypot hit', [
+        'ip' => request()->ip(), 'ua' => request()->userAgent(), 'hits' => $hits
+    ]);
+    abort(404);
+});
 
 
 
@@ -63,8 +99,25 @@ function resolveUser(): string {
         ->first();
     return $row ? $row->username : '';
 }
+// ── Logout — invalidate token immediately ──────────────────────────
+Route::post('/auth/logout', function (Request $request) {
+    $token = $request->header('X-WF-Token', '');
+    if ($token) {
+        DB::table('auth_tokens')->where('token', $token)->delete();
+    }
+    session()->flush();
+    return response()->json(['status' => 'success', 'message' => 'Logged out.']);
+});
+
+// Track suspicious requests
+function trackSuspicious(): void {
+    $key = 'wf_suspicious_' . md5(request()->ip());
+    $count = (int) cache()->get($key, 0) + 1;
+    cache()->put($key, $count, 3600); // reset after 1 hour
+}
+
 // Session init and me — outside throttle group, no auth required
-Route::post('/auth/session-init', function (Request $request) {
+Route::middleware('throttle:10,1')->post('/auth/session-init', function (Request $request) {
     $token = $request->input('session_token', '');
     if (!$token) {
         return response()->json(['status' => 'error', 'message' => 'No token.'], 400);
@@ -259,7 +312,13 @@ Route::middleware('throttle:20,1')->group(function () {
             }
         }
 
-        $submitter = resolveUser() ?: ($v['username'] ?? null);
+        // Username MUST come from verified auth token — never trust client-supplied username
+        $submitter = resolveUser() ?: null;
+        // Only use client username as fallback for truly anonymous (no token) submissions
+        if (!$submitter && !empty($v['username'])) {
+            // Sanitize — strip any HTML/special chars, max 80 chars
+            $submitter = substr(preg_replace('/[^a-zA-Z0-9_\- ]/', '', $v['username']), 0, 80) ?: null;
+        }
         DB::table('form_responses')->insert([
             'form_slug'  => $v['form_slug'],
             'title'      => $v['title'],
@@ -426,7 +485,7 @@ Route::middleware('throttle:20,1')->group(function () {
     // Validate session before accepting submission
     Route::middleware('throttle:10,1')->post('/quiz/validate-session', function (Request $request) {
         $v = $request->validate([
-            'session_id' => 'required|string|size:64',
+            'session_id' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]+$/'],
             'form_slug'  => 'required|string',
         ]);
 
@@ -570,7 +629,7 @@ Route::post('/editor', function (Request $request) {
         'lang_code'       => 'required|string|max:10',
         'lang_name'       => 'required|string|max:100',
         'translation_key' => 'required|string|max:100',
-        'value'           => 'required|string',
+        'value'           => 'required|string|max:2000',
     ]);
     $v['contributed_by'] = $sessionUser;
 
