@@ -187,32 +187,177 @@ Want to add your language? Visit [/contribute](https://wikiforms.toolforge.org/c
 ## 📁 Project Structure
 
 ```
-WikiForms/
-├── backend/                    # Laravel 11 API
-│   ├── app/Http/Controllers/
-│   │   ├── GradingController.php   # AI grading (OpenRouter)
-│   │   └── WikiAuthController.php  # MediaWiki OAuth 2.0
-│   ├── routes/api.php              # All API routes
-│   └── .env.example
-├── frontend/                   # React 18 + Vite SPA
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── FormBuilder.jsx     # Drag-and-drop builder + conditional logic
-│   │   │   ├── QuizViewer.jsx      # Quiz/form renderer + anti-cheat
-│   │   │   ├── MyFormsDashboard.jsx
-│   │   │   ├── ContributeEditor.jsx
-│   │   │   └── Header.jsx
-│   │   ├── App.css                 # Wikimedia Codex design tokens
-│   │   └── i18n.js                 # Translation loader
-│   └── public/                     # Static files
-├── docker/
-│   ├── lighttpd/
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── README.md
+├── SECURITY.md
+├── Screenshots
+│   ├── Screenshot 2026-07-07 19.15.51.png
+│   ├── Screenshot 2026-07-07 19.16.01.png
+│   └── Screenshot 2026-07-07 19.16.23.png
+├── backend
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── app
+│   │   ├── Http
+│   │   │   └── Controllers
+│   │   │       ├── Controller.php
+│   │   │       ├── GradingController.php
+│   │   │       └── WikiAuthController.php
+│   │   ├── Models
+│   │   │   ├── Quiz.php
+│   │   │   ├── QuizResponse.php
+│   │   │   └── User.php
+│   │   └── Providers
+│   │       └── AppServiceProvider.php
+│   ├── artisan
+│   ├── bootstrap
+│   │   ├── app.php
+│   │   ├── cache
+│   │   └── providers.php
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── config
+│   │   ├── app.php
+│   │   ├── auth.php
+│   │   ├── cache.php
+│   │   ├── database.php
+│   │   ├── filesystems.php
+│   │   ├── logging.php
+│   │   ├── mail.php
+│   │   ├── queue.php
+│   │   ├── sanctum.php
+│   │   ├── services.php
+│   │   └── session.php
+│   ├── database
+│   │   ├── factories
+│   │   │   └── UserFactory.php
+│   │   ├── migrations
+│   │   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   │   ├── 2026_06_02_144159_create_personal_access_tokens_table.php
+│   │   │   ├── 2026_06_02_145225_create_quizzes_table.php
+│   │   │   ├── 2026_06_02_151323_create_quiz_responses_table.php
+│   │   │   ├── 2026_06_04_061022_create_forms_table.php
+│   │   │   ├── 2026_06_16_000001_add_collaborators_to_forms_table.php
+│   │   │   └── 2026_06_16_000002_add_timer_to_forms.php
+│   │   └── seeders
+│   │       └── DatabaseSeeder.php
+│   ├── docker-entrypoint.sh
+│   ├── package.json
+│   ├── phpunit.xml
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.php
+│   │   └── robots.txt
+│   ├── resources
+│   │   ├── css
+│   │   │   └── app.css
+│   │   ├── js
+│   │   │   ├── app.js
+│   │   │   └── bootstrap.js
+│   │   └── views
+│   │       └── welcome.blade.php
+│   ├── routes
+│   │   ├── api.php
+│   │   ├── api.php.bak
+│   │   ├── console.php
+│   │   └── web.php
+│   ├── server.js
+│   ├── storage
+│   │   ├── app
+│   │   │   ├── private
+│   │   │   └── public
+│   │   ├── framework
+│   │   │   ├── cache
+│   │   │   │   └── data
+│   │   │   ├── sessions
+│   │   │   ├── testing
+│   │   │   └── views
+│   │   └── logs
+│   ├── tests
+│   │   ├── Feature
+│   │   │   └── ExampleTest.php
+│   │   ├── TestCase.php
+│   │   └── Unit
+│   │       └── ExampleTest.php
+│   └── vite.config.js
+├── clean_cache.py
+├── deploy.sh
+├── docker
+│   ├── lighttpd
 │   │   ├── Dockerfile
-│   │   └── .lighttpd.conf           # Mirrors Toolforge production exactly
-│   └── mysql/
-│       └── init.sql                # Full schema — auto-runs on first start
+│   │   └── lighttpd.conf
+│   └── mysql
+│       └── init.sql
 ├── docker-compose.yml
-└── deploy.sh                       # Toolforge deploy script
+├── frontend
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── deploy.sh
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── agents.txt
+│   │   ├── browserconfig.xml
+│   │   ├── capabilities.xml
+│   │   ├── clientaccesspolicy.xml
+│   │   ├── crossdomain.xml
+│   │   ├── docs.php
+│   │   ├── favicon.svg
+│   │   ├── fonts
+│   │   │   └── inter-400.woff2
+│   │   ├── hall-of-fame.html
+│   │   ├── hall-of-fame.php
+│   │   ├── humans.txt
+│   │   ├── icons.svg
+│   │   ├── keybase.txt
+│   │   ├── lgappxml.xml
+│   │   ├── llms.txt
+│   │   ├── manifest.json
+│   │   ├── opensearch-style.xsl
+│   │   ├── opensearch.xml
+│   │   ├── pgp-key.txt
+│   │   ├── robots.txt
+│   │   ├── security-policy.html
+│   │   ├── security-report.xml
+│   │   ├── security-report.xsl
+│   │   ├── sitemap.xml
+│   │   └── style.xsl
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.jsx
+│   │   ├── api.js
+│   │   ├── components
+│   │   │   ├── AboutPage.jsx
+│   │   │   ├── ContributeEditor.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   ├── Footer.jsx.save
+│   │   │   ├── FormBuilder.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── Icon.jsx
+│   │   │   ├── MyFormsDashboard.jsx
+│   │   │   ├── PrivacyPage.jsx
+│   │   │   ├── QuizViewer.jsx
+│   │   │   ├── RichTextEditor.jsx
+│   │   │   ├── TermsPage.jsx
+│   │   │   ├── WelcomeScreen.jsx
+│   │   │   └── WikiMediaPanel.jsx
+│   │   ├── i18n.js
+│   │   ├── index.css
+│   │   └── main.jsx
+│   └── vite.config.js
+├── jobs.yaml
+├── package-lock.json
+├── package.json
+├── service.manifest
+└── toolinfo.json
+
+43 directories, 127 files
 ```
 
 ---
