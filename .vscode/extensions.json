@@ -1,0 +1,22 @@
+{
+  "recommendations": [
+    // PHP & Laravel
+    "bmewburn.vscode-intelephense-client",
+    "onecentlin.laravel-blade",
+    "amiralizadeh9480.laravel-extra-intellisense",
+    "shufo.vscode-blade-formatter",
+
+    // JS / TS / React
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "dsznajder.es7-react-js-snippets",
+
+    // Docker & Environment
+    "ms-azuretools.vscode-docker",
+    "mikestead.dotenv",
+
+    // General & Code Quality
+    "eamodio.gitlens",
+    "editorconfig.editorconfig"
+  ]
+}
