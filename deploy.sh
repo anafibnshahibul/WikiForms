@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail  # stop on the first failure (a failed build must not wipe the live assets)
 echo "🔄 Fetching the latest code from GitLab..."
 cd ~/frontend || exit
 git pull origin main

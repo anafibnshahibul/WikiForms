@@ -1,10 +1,10 @@
 {
-    "name": "wikiforms",
-    "title": "WikiForms",
-    "version": "2.0.0"
-    "description": "Amazing Drag and Drop Form Builder for Wikimedia",
-    "url": "https://wikiforms.toolforge.org",
-    "keywords": "wikimedia, forms, drag-and-drop",
-    "author": "Anaf",
-    "repository": "https://gitlab.wikimedia.org/toolforge-repos/wikiforms"
-  }
+  "name": "wikiforms",
+  "title": "WikiForms",
+  "version": "2.0.0",
+  "description": "Drag and drop form and quiz builder for Wikimedia users",
+  "url": "https://wikiforms.toolforge.org",
+  "keywords": "wikimedia, forms, quiz, drag-and-drop",
+  "author": "Anaf",
+  "repository": "https://github.com/anafibnshahibul/WikiForms"
+}

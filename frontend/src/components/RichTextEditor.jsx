@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { sanitizeHtml } from '../utils/sanitizeHtml.js';
 import Icon from './Icon.jsx';
 
 // Supported Wikipedia interwiki prefixes
@@ -147,7 +148,7 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style 
   // Sync external value → DOM only on mount
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || '';
+      editorRef.current.innerHTML = sanitizeHtml(value || '');
     }
   }, []);
 

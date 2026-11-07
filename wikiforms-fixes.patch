@@ -1,0 +1,1489 @@
+From 093a8e86ac2734330bf07c1a2724b6f0ec884475 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 12:24:10 +0600
+Subject: [PATCH] Fix API gate, /my-forms, XSS, OAuth state and privacy issues
+ from audit
+
+Backend
+- Move the request gate out of routes/api.php (a file-level `return` only
+  stopped route loading and answered 404) into SecurityGate middleware.
+  Origin check is now an exact match (was a prefix check that accepted
+  https://wikiforms.toolforge.org.evil.example); stale created_at column
+  reference fixed; generic client UAs (curl, python-requests, ...) no longer
+  blocked.
+- Rewrite /my-forms: filter in SQL, select only light columns, batch the
+  response counts instead of 2 queries per form (memory/time crashes);
+  no double urldecode of the username.
+- Verify the OAuth `state`; stop reading/storing/returning users' email
+  (privacy page promises none); hash long-lived auth tokens at rest;
+  escape the JSON embedded in the login popup script.
+- save-form: owner comes from the session only; created_at kept on update.
+- translations: others' live translations cannot be overwritten; validate
+  language codes; throttle write endpoints and /usr-lang.
+- Heartbeat gets its own throttle (3s interval used the whole 20/min limit).
+- Accept both env var naming styles; fix APP_URL typo default.
+- Add guarded migration for tables/columns that only existed in init.sql.
+
+Frontend
+- Sanitize question text/feedback HTML (allowlist) at every
+  dangerouslySetInnerHTML sink; only https cover images.
+
+Repo hygiene
+- Add .gitignore; remove api.php.bak and Footer.jsx.save; fix invalid
+  toolinfo.json, broken Hall of Fame link, license line in humans.txt;
+  deploy scripts stop on first error.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01GCnHYsxd2GKnRVFtCNfpyP
+---
+ .gitignore                                    |  24 +
+ CONTRIBUTING.md                               |   2 +-
+ .../Http/Controllers/WikiAuthController.php   |  27 +-
+ backend/app/Http/Middleware/SecurityGate.php  | 106 ++++
+ backend/bootstrap/app.php                     |   4 +
+ backend/config/app.php                        |   2 +-
+ backend/config/services.php                   |   9 +-
+ ...0_000001_ensure_app_tables_and_columns.php |  76 +++
+ backend/routes/api.php                        | 182 +++----
+ backend/routes/api.php.bak                    | 462 ------------------
+ deploy.sh                                     |   1 +
+ frontend/deploy.sh                            |   1 +
+ frontend/index.html                           |   1 -
+ frontend/public/humans.txt                    |   2 +-
+ frontend/src/components/Footer.jsx.save       |  46 --
+ frontend/src/components/FormBuilder.jsx       |   3 +-
+ frontend/src/components/QuizViewer.jsx        |   9 +-
+ frontend/src/components/RichTextEditor.jsx    |   3 +-
+ frontend/src/utils/sanitizeHtml.js            |  83 ++++
+ toolinfo.json                                 |  18 +-
+ 20 files changed, 418 insertions(+), 643 deletions(-)
+ create mode 100644 .gitignore
+ create mode 100644 backend/app/Http/Middleware/SecurityGate.php
+ create mode 100644 backend/database/migrations/2026_10_30_000001_ensure_app_tables_and_columns.php
+ delete mode 100644 backend/routes/api.php.bak
+ delete mode 100644 frontend/src/components/Footer.jsx.save
+ create mode 100644 frontend/src/utils/sanitizeHtml.js
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..0267647
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,24 @@
++# Secrets / environment
++.env
++.env.*
++!.env.example
++
++# Dependencies and build output
++node_modules/
++vendor/
++dist/
++build/
++
++# Laravel runtime
++backend/storage/logs/*.log
++backend/storage/framework/cache/data/*
++backend/storage/framework/sessions/*
++backend/storage/framework/views/*
++backend/bootstrap/cache/*.php
++
++# Editor / OS
++.idea/
++.DS_Store
++*.swp
++*.bak
++*.save
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index dd38469..c0bdd81 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -66,4 +66,4 @@ To keep the codebase maintainable, please ensure your code complies with these g
+    ```
+ 3. **Open a Pull Request:** Navigate back to the primary source repository on GitHub and open a pull request against our `main` branch. Include a descriptive summary of your fixes or implementations.
+ 
+-Once your pull request is audited and merged by a maintainer, your profile will be permanently cataloged on our live [Hall of Fame](https://toolforge.orghall-of-fame.html) tracking ledger!
++Once your pull request is audited and merged by a maintainer, your profile will be permanently cataloged on our live [Hall of Fame](https://wikiforms.toolforge.org/hall-of-fame.html) tracking ledger!
+diff --git a/backend/app/Http/Controllers/WikiAuthController.php b/backend/app/Http/Controllers/WikiAuthController.php
+index 20d716e..9f8e3ff 100644
+--- a/backend/app/Http/Controllers/WikiAuthController.php
++++ b/backend/app/Http/Controllers/WikiAuthController.php
+@@ -14,11 +14,15 @@ class WikiAuthController extends Controller
+     {
+         $baseUrl = "https://meta.wikimedia.org/w/rest.php/oauth2/authorize";
+ 
++        // Remember the state in the session so the callback can verify it (CSRF protection).
++        $state = bin2hex(random_bytes(16));
++        session(['wf_oauth_state' => $state]);
++
+         $queries = http_build_query([
+             'client_id'     => config('services.mediawiki.client_id'),
+             'response_type' => 'code',
+             'redirect_uri'  => config('services.mediawiki.redirect'),
+-            'state'         => bin2hex(random_bytes(16)),
++            'state'         => $state,
+         ]);
+ 
+         return redirect($baseUrl . '?' . $queries);
+@@ -27,10 +31,16 @@ class WikiAuthController extends Controller
+     public function handleMediaWikiCallback(Request $request)
+     {
+         if ($request->has('error')) {
+-            $msg = json_encode($request->get('error_description', 'Authorization denied'));
++            $msg = json_encode('Authorization denied', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+             return $this->renderResult('WIKI_AUTH_ERROR', null, $msg);
+         }
+ 
++        $expectedState = session()->pull('wf_oauth_state');
++        $givenState    = (string) $request->get('state', '');
++        if (!$expectedState || !hash_equals($expectedState, $givenState)) {
++            return $this->renderResult('WIKI_AUTH_ERROR', null, json_encode('Login failed (invalid state). Please try again.'));
++        }
++
+         try {
+             $response = Http::asForm()
+                 ->withBasicAuth(config('services.mediawiki.client_id'), config('services.mediawiki.client_secret'))
+@@ -56,15 +66,17 @@ class WikiAuthController extends Controller
+ 
+             $userData = $userResponse->json();
+             $username = $userData['username'] ?? 'Unknown User';
+-            $email    = $userData['email'] ?? null;
++            // Deliberately NOT reading the user's email: the privacy policy promises WikiForms
++            // stores no email addresses. The users table requires a unique, non-null email,
++            // so a non-routable placeholder derived from the username is stored instead.
+ 
+             $user = User::where('name', $username)->first();
+ 
+             if (!$user) {
+                 $user = User::create([
+                     'name'     => $username,
+-                    'email'    => $email,
+-                    'password' => bcrypt(uniqid()),
++                    'email'    => substr(hash('sha256', $username), 0, 32) . '@users.wikiforms.invalid',
++                    'password' => bcrypt(bin2hex(random_bytes(16))),
+                 ]);
+             }
+ 
+@@ -80,7 +92,7 @@ class WikiAuthController extends Controller
+             // DB verification is more reliable than HMAC across key rotations.
+             $authToken = bin2hex(random_bytes(32));
+             DB::table('auth_tokens')->insert([
+-                'token'      => $authToken,
++                'token'      => hash('sha256', $authToken),
+                 'username'   => $username,
+                 'expires_at' => now()->addDays(30),
+                 'created_at' => now(),
+@@ -92,9 +104,8 @@ class WikiAuthController extends Controller
+             $sessionToken = bin2hex(random_bytes(24));
+             cache()->put('wf_auth_token_' . $sessionToken, $username, now()->addMinutes(2));
+ 
+-            $userJson = json_encode([
++            $userJson = json_encode(flags: JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT, value: [
+                 'username'      => $username,
+-                'email'         => $email,
+                 'auth_token'    => $authToken,
+                 'session_token' => $sessionToken,
+             ]);
+diff --git a/backend/app/Http/Middleware/SecurityGate.php b/backend/app/Http/Middleware/SecurityGate.php
+new file mode 100644
+index 0000000..cfc0877
+--- /dev/null
++++ b/backend/app/Http/Middleware/SecurityGate.php
+@@ -0,0 +1,106 @@
++<?php
++
++namespace App\Http\Middleware;
++
++use Closure;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Log;
++use Symfony\Component\HttpFoundation\Response;
++
++/**
++ * Pre-routing checks for every API request.
++ *
++ * These used to run as top-level code in routes/api.php, where a bare `return`
++ * only stops that file from loading (the client got a 404 and the remaining
++ * routes were skipped) instead of sending the intended 403/413/429 response.
++ */
++class SecurityGate
++{
++    private const ALLOWED_ORIGIN = 'https://wikiforms.toolforge.org';
++
++    private const BLOCKED_AGENTS = [
++        'sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster',
++        'nuclei', 'burpsuite', 'hydra',
++    ];
++
++    public function handle(Request $request, Closure $next): Response
++    {
++        // 1. Oversized requests (max 1 MB).
++        if ((int) $request->header('Content-Length', 0) > 1_048_576) {
++            return $this->deny('Request too large.', 413);
++        }
++
++        $ip = md5((string) $request->ip());
++
++        // 2. Known scanner user agents.
++        $ua = strtolower((string) $request->header('User-Agent', ''));
++        foreach (self::BLOCKED_AGENTS as $bot) {
++            if (str_contains($ua, $bot)) {
++                $this->trackSuspicious($ip);
++                return $this->deny('Forbidden.', 403);
++            }
++        }
++
++        // 3. IPs that probed honeypot endpoints 3+ times.
++        if ((int) cache()->get('honeypot_' . $ip, 0) >= 3) {
++            return $this->deny('Forbidden.', 403);
++        }
++
++        // 4. IPs with too many suspicious requests (>50/hour).
++        $suspicious = (int) cache()->get('wf_suspicious_' . $ip, 0);
++        if ($suspicious > 50) {
++            Log::warning('Suspicious IP auto-blocked', ['ip' => $request->ip(), 'count' => $suspicious]);
++            return $this->deny('Too many suspicious requests.', 429);
++        }
++
++        // 5. Cross-origin browser requests (error code 677). Exact origin match:
++        //    a prefix check would also accept https://wikiforms.toolforge.org.evil.example
++        foreach (['Origin', 'Referer'] as $header) {
++            $value = (string) $request->header($header, '');
++            if ($value !== '' && !$this->originAllowed($value)) {
++                return response()->json([
++                    'status'  => 'error',
++                    'code'    => 677,
++                    'message' => 'Request blocked: unauthorized origin.',
++                ], 403);
++            }
++        }
++
++        // 6. Occasional housekeeping (1% of requests).
++        if (random_int(1, 100) === 1) {
++            DB::table('auth_tokens')->where('expires_at', '<', now()->subDays(1))->delete();
++            DB::table('quiz_sessions')->where('started_at', '<', now()->subDays(7))->delete();
++        }
++
++        return $next($request);
++    }
++
++    private function originAllowed(string $value): bool
++    {
++        $parts = parse_url($value);
++        if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
++            return false;
++        }
++        $origin = strtolower($parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : ''));
++
++        if ($origin === self::ALLOWED_ORIGIN) {
++            return true;
++        }
++
++        // Local development only (docker-compose / vite dev server).
++        return !app()->isProduction()
++            && in_array($parts['host'], ['localhost', '127.0.0.1'], true);
++    }
++
++    private function trackSuspicious(string $ipHash): void
++    {
++        $key = 'wf_suspicious_' . $ipHash;
++        cache()->put($key, (int) cache()->get($key, 0) + 1, 3600);
++    }
++
++    private function deny(string $message, int $status): Response
++    {
++        return response()->json(['status' => 'error', 'message' => $message], $status);
++    }
++}
+diff --git a/backend/bootstrap/app.php b/backend/bootstrap/app.php
+index a416456..0c9912a 100644
+--- a/backend/bootstrap/app.php
++++ b/backend/bootstrap/app.php
+@@ -12,8 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
+     ->withMiddleware(function (Middleware $middleware): void {
+         // Enable session on API routes so session('wf_username') works for auth checks.
+         $middleware->api(prepend: [
++            App\Http\Middleware\SecurityGate::class,
+             Illuminate\Session\Middleware\StartSession::class,
+         ]);
++        // Toolforge terminates TLS at its proxy; trust it so $request->ip() is the visitor,
++        // not the proxy (otherwise every visitor shares one throttle/ban bucket).
++        $middleware->trustProxies(at: '*');
+         // All API routes use session-cookie auth rather than CSRF tokens.
+         $middleware->validateCsrfTokens(except: [
+             'api/*',
+diff --git a/backend/config/app.php b/backend/config/app.php
+index cdb8960..c3c344d 100644
+--- a/backend/config/app.php
++++ b/backend/config/app.php
+@@ -52,7 +52,7 @@ return [
+     |
+     */
+ 
+-    'url' => env('APP_URL', 'https://wikiform.toolforge.org/'),
++    'url' => env('APP_URL', 'https://wikiforms.toolforge.org/'),
+ 
+     /*
+     |--------------------------------------------------------------------------
+diff --git a/backend/config/services.php b/backend/config/services.php
+index 4c49d01..b141fad 100644
+--- a/backend/config/services.php
++++ b/backend/config/services.php
+@@ -3,7 +3,7 @@
+ return [
+ 
+     'openrouter' => [
+-        'key' => env('OPENROUTER_API_KEY'),
++        'key' => env('OPENROUTER_API_KEY', env('OPENROUTER_KEY')),
+     ],
+ 
+     /*
+@@ -19,9 +19,10 @@ return [
+     */
+ 
+     'mediawiki' => [
+-    'client_id' => env('WIKI_CLIENT_ID'),
+-    'client_secret' => env('WIKI_CLIENT_SECRET'),
+-    'redirect' => 'https://wikiforms.toolforge.org/api/auth/mediawiki/callback',
++    // Both naming styles are accepted (.env.example uses MEDIAWIKI_*, production uses WIKI_*).
++    'client_id' => env('WIKI_CLIENT_ID', env('MEDIAWIKI_CLIENT_ID')),
++    'client_secret' => env('WIKI_CLIENT_SECRET', env('MEDIAWIKI_CLIENT_SECRET')),
++    'redirect' => env('MEDIAWIKI_REDIRECT_URI', 'https://wikiforms.toolforge.org/api/auth/mediawiki/callback'),
+     ],
+ 
+     'postmark' => [
+diff --git a/backend/database/migrations/2026_10_30_000001_ensure_app_tables_and_columns.php b/backend/database/migrations/2026_10_30_000001_ensure_app_tables_and_columns.php
+new file mode 100644
+index 0000000..86b144d
+--- /dev/null
++++ b/backend/database/migrations/2026_10_30_000001_ensure_app_tables_and_columns.php
+@@ -0,0 +1,76 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++/**
++ * The application code uses tables/columns that only existed in docker/mysql/init.sql
++ * or were created by hand on Toolforge. This migration makes a fresh database match,
++ * and is safe to run on the existing one (every step is guarded).
++ */
++return new class extends Migration
++{
++    public function up(): void
++    {
++        if (!Schema::hasTable('auth_tokens')) {
++            Schema::create('auth_tokens', function (Blueprint $table) {
++                $table->id();
++                $table->string('token')->unique();   // sha256 of the token
++                $table->string('username');
++                $table->timestamp('expires_at');
++                $table->timestamp('created_at')->nullable();
++            });
++        }
++
++        if (!Schema::hasTable('quiz_sessions')) {
++            Schema::create('quiz_sessions', function (Blueprint $table) {
++                $table->string('id', 64)->primary();
++                $table->string('form_slug');
++                $table->string('username')->nullable();
++                $table->timestamp('started_at')->nullable();
++                $table->timestamp('last_beat')->nullable();
++                $table->string('status', 20)->default('active');
++                $table->timestamp('deadline')->nullable();
++                $table->string('terminate_reason', 50)->nullable();
++            });
++        }
++
++        if (!Schema::hasTable('translations')) {
++            Schema::create('translations', function (Blueprint $table) {
++                $table->id();
++                $table->string('lang_code', 10);
++                $table->string('lang_name', 100);
++                $table->string('translation_key', 100);
++                $table->text('value');
++                $table->string('status', 20)->default('draft');
++                $table->string('contributed_by')->nullable();
++                $table->string('published_by')->nullable();
++                $table->timestamps();
++                $table->unique(['lang_code', 'translation_key'], 'translations_lang_key_unique');
++            });
++        }
++
++        if (Schema::hasTable('forms')) {
++            Schema::table('forms', function (Blueprint $table) {
++                if (!Schema::hasColumn('forms', 'content_type'))     $table->string('content_type', 50)->default('form');
++                if (!Schema::hasColumn('forms', 'cover_image'))      $table->text('cover_image')->nullable();
++                if (!Schema::hasColumn('forms', 'result_timing'))    $table->string('result_timing', 20)->default('instant');
++                if (!Schema::hasColumn('forms', 'timer_before_msg')) $table->longText('timer_before_msg')->nullable();
++                if (!Schema::hasColumn('forms', 'timer_after_msg'))  $table->longText('timer_after_msg')->nullable();
++            });
++        }
++
++        if (Schema::hasTable('form_responses')) {
++            Schema::table('form_responses', function (Blueprint $table) {
++                if (!Schema::hasColumn('form_responses', 'score'))    $table->longText('score')->nullable();
++                if (!Schema::hasColumn('form_responses', 'username')) $table->string('username')->nullable();
++            });
++        }
++    }
++
++    public function down(): void
++    {
++        // Intentionally empty: these structures may pre-date this migration.
++    }
++};
+diff --git a/backend/routes/api.php b/backend/routes/api.php
+index e7ac347..c41edf1 100644
+--- a/backend/routes/api.php
++++ b/backend/routes/api.php
+@@ -4,44 +4,10 @@ use Illuminate\Support\Facades\Route;
+ use Illuminate\Support\Facades\DB;
+ use Illuminate\Support\Facades\Crypt;
+ 
+-// ============================================================
+-// Security Gate — runs on every API request
+-// ============================================================
+-
+-// 1. Block oversized requests (max 1MB) — prevents payload flooding
+-if ((int) request()->header('Content-Length', 0) > 1_048_576) {
+-    return response()->json(['status' => 'error', 'message' => 'Request too large.'], 413);
+-}
+-
+-// 2. Block known scanner/bot user agents
+-$ua = strtolower(request()->header('User-Agent', ''));
+-$blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra', 'python-requests', 'go-http-client', 'java/', 'libwww', 'lwp-', 'wget/', 'curl/'];
+-foreach ($blockedAgents as $bot) {
+-    if (str_contains($ua, $bot)) {
+-        trackSuspicious();
+-        return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+-    }
+-}
+-
+-// 3. Ban IPs that probed honeypot endpoints (3+ hits = scanner)
+-$_honeypotHits = (int) cache()->get('honeypot_' . md5(request()->ip()), 0);
+-if ($_honeypotHits >= 3) {
+-    return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+-}
+-
+-// 4. Block IPs with too many suspicious requests (>50/hour)
+-$_suspKey   = 'wf_suspicious_' . md5(request()->ip());
+-$_suspCount = (int) cache()->get($_suspKey, 0);
+-if ($_suspCount > 50) {
+-    \Illuminate\Support\Facades\Log::warning('Suspicious IP auto-blocked', [
+-        'ip'    => request()->ip(),
+-        'ua'    => request()->userAgent(),
+-        'count' => $_suspCount,
+-    ]);
+-    return response()->json(['status' => 'error', 'message' => 'Too many suspicious requests.'], 429);
+-}
++// Request gate (size, scanner agents, honeypot bans, origin check) lives in
++// App\Http\Middleware\SecurityGate and is registered in bootstrap/app.php.
+ 
+-// 5. Honeypot routes — scanners always probe these
++// Honeypot routes — scanners always probe these
+ Route::any('/wp-admin',      fn() => abort(404));
+ Route::any('/wp-login.php',  fn() => abort(404));
+ Route::any('/.env',          fn() => abort(404));
+@@ -60,30 +26,6 @@ Route::any('/admin',  function () {
+ 
+ 
+ 
+-// 3. Custom error code 677 — request from unauthorized external origin.
+-// Browsers always send Origin on cross-origin requests; direct server calls won't have it.
+-$origin  = request()->header('Origin', '');
+-$referer = request()->header('Referer', '');
+-$allowed = 'https://wikiforms.toolforge.org';
+-$isBrowser = !empty($origin) || !empty($referer);
+-
+-if ($isBrowser) {
+-    $originOk  = empty($origin)  || str_starts_with($origin,  $allowed);
+-    $refererOk = empty($referer) || str_starts_with($referer, $allowed);
+-    if (!$originOk || !$refererOk) {
+-        return response()->json([
+-            'status'  => 'error',
+-            'code'    => 677,
+-            'message' => 'Request blocked: unauthorized origin.',
+-        ], 403);
+-    }
+-}
+-
+-// 4. Cleanup expired auth tokens periodically (1% chance per request — cheap maintenance)
+-if (random_int(1, 100) === 1) {
+-    DB::table('auth_tokens')->where('expires_at', '<', now()->subDays(1))->delete();
+-    DB::table('quiz_sessions')->where('created_at', '<', now()->subDays(7))->delete();
+-}
+ 
+ // Resolves and verifies the authenticated username.
+ // Accepts either a valid server session or a verified HMAC-signed token
+@@ -94,7 +36,7 @@ function resolveUser(): string {
+     $token = request()->header('X-WF-Token', '');
+     if (!$token) return '';
+     $row = DB::table('auth_tokens')
+-        ->where('token', $token)
++        ->where('token', hash('sha256', $token))
+         ->where('expires_at', '>', now())
+         ->first();
+     return $row ? $row->username : '';
+@@ -103,19 +45,12 @@ function resolveUser(): string {
+ Route::post('/auth/logout', function (Request $request) {
+     $token = $request->header('X-WF-Token', '');
+     if ($token) {
+-        DB::table('auth_tokens')->where('token', $token)->delete();
++        DB::table('auth_tokens')->where('token', hash('sha256', $token))->delete();
+     }
+     session()->flush();
+     return response()->json(['status' => 'success', 'message' => 'Logged out.']);
+ });
+ 
+-// Track suspicious requests
+-function trackSuspicious(): void {
+-    $key = 'wf_suspicious_' . md5(request()->ip());
+-    $count = (int) cache()->get($key, 0) + 1;
+-    cache()->put($key, $count, 3600); // reset after 1 hour
+-}
+-
+ // Session init and me — outside throttle group, no auth required
+ Route::middleware('throttle:10,1')->post('/auth/session-init', function (Request $request) {
+     $token = $request->input('session_token', '');
+@@ -165,7 +100,8 @@ Route::middleware('throttle:20,1')->group(function () {
+         ]);
+ 
+         $sessionUser    = resolveUser();
+-        $requestedOwner = $sessionUser ?: ($v['owner_username'] ?? 'Anonymous');
++        // Never trust a client-supplied owner: it would let anyone create forms "owned" by another user.
++        $requestedOwner = $sessionUser ?: 'Anonymous';
+         $existing       = DB::table('forms')->where('slug', $v['slug'])->first();
+ 
+         if ($existing) {
+@@ -197,7 +133,7 @@ Route::middleware('throttle:20,1')->group(function () {
+                 'timer_after_msg'  => json_encode($v['timer_after_msg'] ?? []),
+                 'result_timing'    => $v['result_timing'] ?? 'instant',
+                 'updated_at'       => now(),
+-                'created_at'       => now(),
++                'created_at'       => $existing->created_at ?? now(),
+             ]
+         );
+ 
+@@ -438,7 +374,7 @@ Route::middleware('throttle:20,1')->group(function () {
+ 
+     // Heartbeat ping — client sends every 3 seconds while quiz is active.
+     // Browser tab freeze causes JS to stop, missing beats flags the session.
+-    Route::post('/quiz/heartbeat', function (Request $request) {
++    Route::withoutMiddleware('throttle:20,1')->middleware('throttle:40,1')->post('/quiz/heartbeat', function (Request $request) {
+         $v = $request->validate([
+             'session_id' => 'required|string|size:64',
+         ]);
+@@ -526,41 +462,69 @@ Route::middleware('throttle:20,1')->group(function () {
+         if (!$requester) {
+             return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+         }
+-        if ($requester !== urldecode($username)) {
++        // Laravel has already URL-decoded the route parameter; decoding again would
++        // corrupt names containing '+' or '%'.
++        if ($requester !== $username) {
+             return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+         }
++
++        // Filter in SQL and select only the light columns. The old version loaded every
++        // form row (including the large encrypted `questions` column) into PHP memory and
++        // ran two extra queries per form, which is what exhausts memory/time on Toolforge.
+         $forms = DB::table('forms')
++            ->select('slug', 'title', 'content_type', 'owner_username', 'collaborators',
++                     'timer_type', 'created_at', 'updated_at')
++            ->where(function ($q) use ($requester) {
++                $q->where('owner_username', $requester)
++                  ->orWhere('collaborators', 'like', '%' . json_encode($requester, JSON_UNESCAPED_UNICODE) . '%')
++                  ->orWhere('collaborators', 'like', '%' . json_encode($requester) . '%');
++            })
++            ->orderByDesc('updated_at')
+             ->get()
+-            ->filter(function ($form) use ($username) {
+-                if ($form->owner_username === $username) return true;
++            // LIKE is only a pre-filter; confirm exact membership in PHP.
++            ->filter(function ($form) use ($requester) {
++                if ($form->owner_username === $requester) return true;
+                 $collabs = json_decode($form->collaborators ?? '[]', true);
+-                return in_array($username, $collabs ?? []);
+-            })
+-            ->map(function ($form) {
+-                $responseCount = DB::table('form_responses')
+-                    ->where('form_slug', $form->slug)
+-                    ->count();
+-                $recentResponses = DB::table('form_responses')
+-                    ->where('form_slug', $form->slug)
+-                    ->orderBy('created_at', 'desc')
+-                    ->limit(30)
+-                    ->pluck('created_at');
+-                return [
+-                    'slug'           => $form->slug,
+-                    'title'          => $form->title,
+-                    'content_type'   => $form->content_type,
+-                    'owner_username' => $form->owner_username,
+-                    'collaborators'  => json_decode($form->collaborators ?? '[]'),
+-                    'timer_type'     => $form->timer_type ?? 'none',
+-                    'response_count' => $responseCount,
+-                    'recent_dates'   => $recentResponses,
+-                    'created_at'     => $form->created_at,
+-                    'updated_at'     => $form->updated_at,
+-                ];
++                return is_array($collabs) && in_array($requester, $collabs, true);
+             })
+             ->values();
+ 
+-        return response()->json(['status' => 'success', 'forms' => $forms]);
++        $slugs = $forms->pluck('slug')->all();
++        $counts = $slugs
++            ? DB::table('form_responses')->whereIn('form_slug', $slugs)
++                ->select('form_slug', DB::raw('COUNT(*) as c'))->groupBy('form_slug')
++                ->pluck('c', 'form_slug')
++            : collect();
++
++        // Last 30 response dates per form, fetched once (not once per form).
++        $recent = [];
++        if ($slugs) {
++            DB::table('form_responses')
++                ->whereIn('form_slug', $slugs)
++                ->orderByDesc('created_at')
++                ->limit(30 * count($slugs))
++                ->get(['form_slug', 'created_at'])
++                ->each(function ($r) use (&$recent) {
++                    if (count($recent[$r->form_slug] ?? []) < 30) {
++                        $recent[$r->form_slug][] = $r->created_at;
++                    }
++                });
++        }
++
++        $result = $forms->map(fn($form) => [
++            'slug'           => $form->slug,
++            'title'          => $form->title,
++            'content_type'   => $form->content_type,
++            'owner_username' => $form->owner_username,
++            'collaborators'  => json_decode($form->collaborators ?? '[]'),
++            'timer_type'     => $form->timer_type ?? 'none',
++            'response_count' => (int) ($counts[$form->slug] ?? 0),
++            'recent_dates'   => $recent[$form->slug] ?? [],
++            'created_at'     => $form->created_at,
++            'updated_at'     => $form->updated_at,
++        ])->values();
++
++        return response()->json(['status' => 'success', 'forms' => $result]);
+     });
+ 
+ 
+@@ -573,7 +537,10 @@ Route::middleware('throttle:20,1')->group(function () {
+ // Returns all live translations for a given language.
+ // Falls back to English for any key missing in the requested language.
+ // Cached for 10 minutes to avoid repeated DB queries on every page load.
+-Route::get('/usr-lang/{lang}', function ($lang) {
++Route::middleware('throttle:60,1')->get('/usr-lang/{lang}', function ($lang) {
++    if (!preg_match('/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/', $lang)) {
++        return response()->json(['status' => 'error', 'message' => 'Invalid language code.'], 400);
++    }
+     $cacheKey = 'translations_' . $lang;
+     $keys = Cache::remember($cacheKey, 600, function () use ($lang) {
+         $live = DB::table('translations')
+@@ -620,13 +587,13 @@ Route::get('/usr-lang', function () {
+ });
+ 
+ // Logged-in Wikipedia user submits a translation for a key (creates or updates as draft).
+-Route::post('/editor', function (Request $request) {
++Route::middleware('throttle:30,1')->post('/editor', function (Request $request) {
+     $sessionUser = resolveUser();
+     if (!$sessionUser) {
+         return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+     }
+     $v = $request->validate([
+-        'lang_code'       => 'required|string|max:10',
++        'lang_code'       => ['required', 'string', 'max:10', 'regex:/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/'],
+         'lang_name'       => 'required|string|max:100',
+         'translation_key' => 'required|string|max:100',
+         'value'           => 'required|string|max:2000',
+@@ -638,6 +605,13 @@ Route::post('/editor', function (Request $request) {
+         ->where('translation_key', $v['translation_key'])
+         ->first();
+ 
++    // A live translation can only be changed by the person who contributed it.
++    // Without this, anyone could overwrite someone else's translation (it became their
++    // draft) and then publish it themselves.
++    if ($exists && $exists->status === 'live' && $exists->contributed_by !== $sessionUser) {
++        return response()->json(['status' => 'error', 'message' => 'This translation is live and owned by another contributor.'], 403);
++    }
++
+     // Never allow editing system-seeded English live keys directly
+     if ($exists && $v['lang_code'] === 'en' && $exists->contributed_by === 'system' && $exists->status === 'live') {
+         return response()->json(['status' => 'error', 'message' => 'English source keys are read-only.'], 403);
+@@ -660,7 +634,7 @@ Route::post('/editor', function (Request $request) {
+ });
+ 
+ // Any logged-in Wikipedia user can publish a draft translation.
+-Route::post('/publisher', function (Request $request) {
++Route::middleware('throttle:30,1')->post('/publisher', function (Request $request) {
+     $sessionUser = resolveUser();
+     if (!$sessionUser) {
+         return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+diff --git a/backend/routes/api.php.bak b/backend/routes/api.php.bak
+deleted file mode 100644
+index 894f04f..0000000
+--- a/backend/routes/api.php.bak
++++ /dev/null
+@@ -1,462 +0,0 @@
+-<?php
+-use Illuminate\Http\Request;
+-use Illuminate\Support\Facades\Route;
+-use Illuminate\Support\Facades\DB;
+-use Illuminate\Support\Facades\Crypt;
+-
+-// Custom error code 677 — request from unauthorized external origin.
+-// Browsers always send Origin on cross-origin requests; direct server calls won't have it.
+-$origin  = request()->header('Origin', '');
+-$referer = request()->header('Referer', '');
+-$allowed = 'https://wikiforms.toolforge.org';
+-$isBrowser = !empty($origin) || !empty($referer);
+-
+-if ($isBrowser) {
+-    $originOk  = empty($origin)  || str_starts_with($origin,  $allowed);
+-    $refererOk = empty($referer) || str_starts_with($referer, $allowed);
+-    if (!$originOk || !$refererOk) {
+-        return response()->json([
+-            'status'  => 'error',
+-            'code'    => 677,
+-            'message' => 'Request blocked: unauthorized origin.',
+-        ], 403);
+-    }
+-}
+-
+-// Reject requests not originating from the official domain.
+-// Checks both Origin and Referer headers — spoofing both from a browser is not possible.
+-// Note: curl/Postman can spoof these, but that is acceptable for a public web tool.
+-$origin  = request()->header('Origin', '');
+-$referer = request()->header('Referer', '');
+-$allowed = 'https://wikiforms.toolforge.org';
+-
+-$isAllowed = str_starts_with($origin, $allowed) || str_starts_with($referer, $allowed);
+-
+-// Allow server-side / CLI calls (no Origin/Referer) only in non-production
+-$isCLI = empty($origin) && empty($referer);
+-
+-if (!$isAllowed && !$isCLI) {
+-    abort(403, 'Requests from unauthorized origins are not allowed.');
+-}
+-
+-// Resolves and verifies the authenticated username.
+-// Accepts either a valid server session or a verified HMAC-signed token
+-// sent in the X-WF-Token header. Plain X-WF-User header alone is rejected.
+-function resolveUser(): string {
+-    // 1. Server session is always trusted
+-    $fromSession = session('wf_username', '');
+-    if ($fromSession) return $fromSession;
+-
+-    // 2. Verify HMAC-signed token from frontend
+-    $rawToken = request()->header('X-WF-Token', '');
+-    if (!$rawToken) return '';
+-
+-    try {
+-        $decoded = base64_decode($rawToken, strict: true);
+-        if (!$decoded) return '';
+-
+-        $parts = explode('|', $decoded);
+-        if (count($parts) !== 3) return '';
+-
+-        [$username, $ts, $signature] = $parts;
+-
+-        // Token must not be older than 24 hours
+-        if (abs(time() - (int)$ts) > 86400) return '';
+-
+-        $payload       = $username . '|' . $ts;
+-        $expectedSig   = hash_hmac('sha256', $payload, config('app.key'));
+-        if (!hash_equals($expectedSig, $signature)) return '';
+-
+-        return $username;
+-    } catch (\Throwable $e) {
+-        return '';
+-    }
+-}
+-
+-// Session init and me — outside throttle group, no auth required
+-Route::post('/auth/session-init', function (Request $request) {
+-    $token = $request->input('session_token', '');
+-    if (!$token) {
+-        return response()->json(['status' => 'error', 'message' => 'No token.'], 400);
+-    }
+-    $username = cache()->get('wf_auth_token_' . $token);
+-    if (!$username) {
+-        return response()->json(['status' => 'error', 'message' => 'Invalid or expired token.'], 403);
+-    }
+-    cache()->forget('wf_auth_token_' . $token);
+-    session(['wf_username' => $username]);
+-    return response()->json(['status' => 'success', 'username' => $username]);
+-});
+-
+-Route::get('/auth/me', function () {
+-    $username = session('wf_username', null);
+-    if (!$username) {
+-        return response()->json(['status' => 'guest']);
+-    }
+-    return response()->json(['status' => 'success', 'username' => $username]);
+-});
+-
+-Route::middleware('throttle:20,1')->group(function () {
+-
+-    Route::get('/test-connection', function () {
+-        return response()->json(['status' => 'success', 'message' => 'Connected!']);
+-    });
+-
+-    // Save form - questions are encrypted before storage using Laravel's AES-256-CBC Crypt facade
+-    Route::post('/save-form', function (Request $request) {
+-        $v = $request->validate([
+-            'slug'             => 'required|string|max:100|regex:/^[a-zA-Z0-9_-]+$/',
+-            'contentType'      => 'required|string|in:form,quiz',
+-            'title'            => 'required|string|max:255',
+-            'description'      => 'nullable|string|max:2000',
+-            'cover_image'      => 'nullable|url|max:500',
+-            'questions'        => 'required|array|max:200',
+-            'owner_username'   => 'nullable|string|max:255',
+-            'timer_type'       => 'nullable|string|in:none,static,scheduled',
+-            'timer_duration'   => 'nullable|integer|min:1|max:1440',
+-            'timer_start'      => 'nullable|string|max:30',
+-            'timer_end'        => 'nullable|string|max:30',
+-            'timer_before_msg' => 'nullable|array',
+-            'timer_after_msg'  => 'nullable|array',
+-            'result_timing'    => 'nullable|string|in:instant,delayed',
+-        ]);
+-
+-        $sessionUser    = resolveUser();
+-        $requestedOwner = $sessionUser ?: ($v['owner_username'] ?? 'Anonymous');
+-        $existing       = DB::table('forms')->where('slug', $v['slug'])->first();
+-
+-        if ($existing) {
+-            $collaborators = json_decode($existing->collaborators ?? '[]', true) ?? [];
+-            $isOwner       = $existing->owner_username === $sessionUser;
+-            $isCollab      = in_array($sessionUser, $collaborators);
+-            if (!$sessionUser || (!$isOwner && !$isCollab)) {
+-                return response()->json(['status' => 'error', 'message' => 'Forbidden: you do not own this form.'], 403);
+-            }
+-            $requestedOwner = $existing->owner_username;
+-        }
+-
+-        $encryptedQuestions = Crypt::encryptString(json_encode($v['questions']));
+-
+-        DB::table('forms')->updateOrInsert(
+-            ['slug' => $v['slug']],
+-            [
+-                'content_type'     => $v['contentType'],
+-                'title'            => $v['title'],
+-                'description'      => $v['description'] ?? '',
+-                'cover_image'      => $v['cover_image'] ?? null,
+-                'questions'        => $encryptedQuestions,
+-                'owner_username'   => $requestedOwner,
+-                'timer_type'       => $v['timer_type'] ?? 'none',
+-                'timer_duration'   => $v['timer_duration'] ?? 0,
+-                'timer_start'      => $v['timer_start'] ?? null,
+-                'timer_end'        => $v['timer_end'] ?? null,
+-                'timer_before_msg' => json_encode($v['timer_before_msg'] ?? []),
+-                'timer_after_msg'  => json_encode($v['timer_after_msg'] ?? []),
+-                'result_timing'    => $v['result_timing'] ?? 'instant',
+-                'updated_at'       => now(),
+-                'created_at'       => now(),
+-            ]
+-        );
+-
+-        return response()->json(['status' => 'success']);
+-    });
+-
+-    // Public metadata endpoint - questions are intentionally NOT returned here
+-    Route::get('/get-form/{slug}', function ($slug) {
+-        $form = DB::table('forms')->where('slug', $slug)->first();
+-        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found!'], 404);
+-
+-        return response()->json([
+-            'id'               => $form->slug,
+-            'contentType'      => $form->content_type ?? 'form',
+-            'title'            => $form->title,
+-            'description'      => $form->description,
+-            'cover_image'      => $form->cover_image,
+-            'owner_username'   => $form->owner_username,
+-            'collaborators'    => json_decode($form->collaborators ?? '[]'),
+-            'timer_type'       => $form->timer_type ?? 'none',
+-            'timer_duration'   => $form->timer_duration ?? 0,
+-            'timer_start'      => $form->timer_start,
+-            'timer_end'        => $form->timer_end,
+-            'timer_before_msg' => json_decode($form->timer_before_msg ?? '{}', true),
+-            'timer_after_msg'  => json_decode($form->timer_after_msg ?? '{}', true),
+-            'result_timing'    => $form->result_timing ?? 'instant',
+-        ]);
+-    });
+-
+-    // Secured endpoint - called only when the user actually starts the form/quiz
+-    Route::post('/get-form-questions/{slug}', function ($slug) {
+-        $form = DB::table('forms')->where('slug', $slug)->first();
+-        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+-
+-        try {
+-            $decrypted = Crypt::decryptString($form->questions);
+-            $questions = json_decode($decrypted, true);
+-        } catch (\Exception $e) {
+-            return response()->json(['status' => 'error', 'message' => 'Failed to decrypt form data'], 500);
+-        }
+-
+-        $requester     = resolveUser();
+-        $collaborators = json_decode($form->collaborators ?? '[]', true) ?? [];
+-        $isOwner       = $form->owner_username === $requester;
+-        $isCollab      = in_array($requester, $collaborators);
+-        if (!$isOwner && !$isCollab) {
+-            $questions = array_map(function ($q) {
+-                unset($q['correctAnswer'], $q['successMsg'], $q['failMsg']);
+-                return $q;
+-            }, $questions ?? []);
+-        }
+-        return response()->json(['status' => 'success', 'questions' => $questions]);
+-    });
+-
+-    Route::post('/save-response', function (Request $request) {
+-        $v = $request->validate([
+-            'form_slug' => 'required|string',
+-            'title'     => 'required|string',
+-            'type'      => 'required|string',
+-            'answers'   => 'required|array',
+-        ]);
+-        DB::table('form_responses')->insert([
+-            'form_slug'  => $v['form_slug'],
+-            'title'      => $v['title'],
+-            'type'       => $v['type'],
+-            'answers'    => json_encode($v['answers']),
+-            'timestamp'  => now()->toDateTimeString(),
+-            'created_at' => now(),
+-            'updated_at' => now(),
+-        ]);
+-        return response()->json(['status' => 'success']);
+-    });
+-
+-    Route::get('/get-responses/{slug}', function ($slug) {
+-        $form = DB::table('forms')->where('slug', $slug)->first();
+-        if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+-
+-        $requester     = resolveUser();
+-        $collaborators = json_decode($form->collaborators ?? '[]', true) ?? [];
+-        $isOwner       = $form->owner_username === $requester;
+-        $isCollab      = in_array($requester, $collaborators);
+-        if (!$requester || (!$isOwner && !$isCollab)) {
+-            return response()->json(['status' => 'error', 'message' => 'Forbidden: login required.'], 403);
+-        }
+-
+-        $responses = DB::table('form_responses')
+-            ->where('form_slug', $slug)
+-            ->orderBy('created_at', 'desc')
+-            ->get()
+-            ->map(fn($r) => [
+-                'id'        => $r->id,
+-                'answers'   => json_decode($r->answers, true),
+-                'timestamp' => $r->timestamp,
+-            ]);
+-        return response()->json(['status' => 'success', 'responses' => $responses]);
+-    });
+-
+-    Route::post('/grade-response', [\App\Http\Controllers\GradingController::class, 'gradeResponse']);
+-
+-
+-
+-
+-    // Returns all forms owned by or collaborated on by a given Wikipedia user,
+-    // along with response counts — used by the My Forms dashboard.
+-    Route::get('/my-forms/{username}', function ($username) {
+-        $requester = resolveUser();
+-        if (!$requester) {
+-            return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+-        }
+-        if ($requester !== urldecode($username)) {
+-            return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+-        }
+-        $forms = DB::table('forms')
+-            ->get()
+-            ->filter(function ($form) use ($username) {
+-                if ($form->owner_username === $username) return true;
+-                $collabs = json_decode($form->collaborators ?? '[]', true);
+-                return in_array($username, $collabs ?? []);
+-            })
+-            ->map(function ($form) {
+-                $responseCount = DB::table('form_responses')
+-                    ->where('form_slug', $form->slug)
+-                    ->count();
+-                $recentResponses = DB::table('form_responses')
+-                    ->where('form_slug', $form->slug)
+-                    ->orderBy('created_at', 'desc')
+-                    ->limit(30)
+-                    ->pluck('created_at');
+-                return [
+-                    'slug'           => $form->slug,
+-                    'title'          => $form->title,
+-                    'content_type'   => $form->content_type,
+-                    'owner_username' => $form->owner_username,
+-                    'collaborators'  => json_decode($form->collaborators ?? '[]'),
+-                    'timer_type'     => $form->timer_type ?? 'none',
+-                    'response_count' => $responseCount,
+-                    'recent_dates'   => $recentResponses,
+-                    'created_at'     => $form->created_at,
+-                    'updated_at'     => $form->updated_at,
+-                ];
+-            })
+-            ->values();
+-
+-        return response()->json(['status' => 'success', 'forms' => $forms]);
+-    });
+-
+-
+-});
+-
+-// ============================================================
+-// i18n / Translation APIs
+-// ============================================================
+-
+-// Returns all live translations for a given language.
+-// Falls back to English for any key missing in the requested language.
+-// Cached for 10 minutes to avoid repeated DB queries on every page load.
+-Route::get('/usr-lang/{lang}', function ($lang) {
+-    $cacheKey = 'translations_' . $lang;
+-    $keys = Cache::remember($cacheKey, 600, function () use ($lang) {
+-        $live = DB::table('translations')
+-            ->where('lang_code', $lang)
+-            ->where('status', 'live')
+-            ->pluck('value', 'translation_key');
+-        if ($lang !== 'en') {
+-            $english = DB::table('translations')
+-                ->where('lang_code', 'en')
+-                ->where('status', 'live')
+-                ->pluck('value', 'translation_key');
+-            $live = $english->merge($live);
+-        }
+-        return $live;
+-    });
+-
+-    return response()->json([
+-        'status' => 'success',
+-        'lang'   => $lang,
+-        'keys'   => $keys,
+-    ])->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+-});
+-
+-// Returns list of available languages with their live key coverage.
+-Route::get('/usr-lang', function () {
+-    $langs = DB::table('translations')
+-        ->select('lang_code', 'lang_name',
+-            DB::raw("SUM(status = 'live') as live_count"),
+-            DB::raw('COUNT(*) as total_count'))
+-        ->groupBy('lang_code', 'lang_name')
+-        ->orderBy('lang_code')
+-        ->get()
+-        ->map(fn($r) => [
+-            'code'       => $r->lang_code,
+-            'name'       => $r->lang_name,
+-            'live_count' => (int) $r->live_count,
+-            'total'      => (int) $r->total_count,
+-            'coverage'   => $r->total_count > 0
+-                ? round(($r->live_count / $r->total_count) * 100)
+-                : 0,
+-        ]);
+-
+-    return response()->json(['status' => 'success', 'languages' => $langs]);
+-});
+-
+-// Logged-in Wikipedia user submits a translation for a key (creates or updates as draft).
+-Route::post('/editor', function (Request $request) {
+-    $sessionUser = resolveUser();
+-    if (!$sessionUser) {
+-        return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+-    }
+-    $v = $request->validate([
+-        'lang_code'       => 'required|string|max:10',
+-        'lang_name'       => 'required|string|max:100',
+-        'translation_key' => 'required|string|max:100',
+-        'value'           => 'required|string',
+-    ]);
+-    $v['contributed_by'] = $sessionUser;
+-
+-    $exists = DB::table('translations')
+-        ->where('lang_code', $v['lang_code'])
+-        ->where('translation_key', $v['translation_key'])
+-        ->first();
+-
+-    // Never allow editing system-seeded English live keys directly
+-    if ($exists && $v['lang_code'] === 'en' && $exists->contributed_by === 'system' && $exists->status === 'live') {
+-        return response()->json(['status' => 'error', 'message' => 'English source keys are read-only.'], 403);
+-    }
+-
+-    DB::table('translations')->updateOrInsert(
+-        ['lang_code' => $v['lang_code'], 'translation_key' => $v['translation_key']],
+-        [
+-            'lang_name'      => $v['lang_name'],
+-            'value'          => $v['value'],
+-            'status'         => 'draft',
+-            'contributed_by' => $v['contributed_by'],
+-            'published_by'   => null,
+-            'updated_at'     => now(),
+-            'created_at'     => now(),
+-        ]
+-    );
+-
+-    return response()->json(['status' => 'success', 'message' => 'Translation saved as draft.']);
+-});
+-
+-// Any logged-in Wikipedia user can publish a draft translation.
+-Route::post('/publisher', function (Request $request) {
+-    $sessionUser = resolveUser();
+-    if (!$sessionUser) {
+-        return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
+-    }
+-    $v = $request->validate([
+-        'lang_code'       => 'required|string|max:10',
+-        'translation_key' => 'required|string|max:100',
+-    ]);
+-    $v['published_by'] = $sessionUser;
+-
+-    $row = DB::table('translations')
+-        ->where('lang_code', $v['lang_code'])
+-        ->where('translation_key', $v['translation_key'])
+-        ->first();
+-
+-    if (!$row) {
+-        return response()->json(['status' => 'error', 'message' => 'Translation not found.'], 404);
+-    }
+-
+-    if ($v['lang_code'] === 'en' && $row->contributed_by === 'system') {
+-        return response()->json(['status' => 'error', 'message' => 'English source keys cannot be republished.'], 403);
+-    }
+-
+-    DB::table('translations')
+-        ->where('lang_code', $v['lang_code'])
+-        ->where('translation_key', $v['translation_key'])
+-        ->update([
+-            'status'       => 'live',
+-            'published_by' => $v['published_by'],
+-            'updated_at'   => now(),
+-        ]);
+-
+-    return response()->json(['status' => 'success', 'message' => 'Translation published.']);
+-});
+-
+-// Returns all draft translations for a language (for the Contribute page).
+-Route::get('/editor/{lang}', function ($lang) {
+-    $drafts = DB::table('translations')
+-        ->where('lang_code', $lang)
+-        ->orderBy('translation_key')
+-        ->get()
+-        ->map(fn($r) => [
+-            'key'            => $r->translation_key,
+-            'value'          => $r->value,
+-            'status'         => $r->status,
+-            'contributed_by' => $r->contributed_by,
+-            'updated_at'     => $r->updated_at,
+-        ]);
+-
+-    $english = DB::table('translations')
+-        ->where('lang_code', 'en')
+-        ->where('status', 'live')
+-        ->pluck('value', 'translation_key');
+-
+-    return response()->json([
+-        'status'  => 'success',
+-        'lang'    => $lang,
+-        'source'  => $english,
+-        'drafts'  => $drafts,
+-    ]);
+-});
+diff --git a/deploy.sh b/deploy.sh
+index 5912eba..bdb3f7a 100755
+--- a/deploy.sh
++++ b/deploy.sh
+@@ -1,4 +1,5 @@
+ #!/bin/bash
++set -euo pipefail  # stop on the first failure (a failed build must not wipe the live assets)
+ echo "🔄 Fetching the latest code from GitLab..."
+ cd ~/frontend || exit
+ git pull origin main
+diff --git a/frontend/deploy.sh b/frontend/deploy.sh
+index 26ae93a..91d07c7 100755
+--- a/frontend/deploy.sh
++++ b/frontend/deploy.sh
+@@ -1,4 +1,5 @@
+ #!/bin/bash
++set -euo pipefail
+ echo "🔄 Fetching the latest code from GitLab..."
+ cd ~/frontend || exit
+ git pull origin main
+diff --git a/frontend/index.html b/frontend/index.html
+index bcad39d..81e5479 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -29,7 +29,6 @@
+   <meta name="google" content="notranslate" />
+   <meta name="slurp" content="index, follow" />
+ 
+-  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+ 
+   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+   <meta name="msapplication-navbutton-color" content="#3366cc" />
+diff --git a/frontend/public/humans.txt b/frontend/public/humans.txt
+index bad33e7..cf0a653 100644
+--- a/frontend/public/humans.txt
++++ b/frontend/public/humans.txt
+@@ -10,5 +10,5 @@
+     Standards: JavaScript, JavaScript XML, Node.js, PHP, HTML5, CSS3
+     Software: Lighttpd
+     Hosting: Toolforge Hosted
+-    License: Creative Commons Attribution-ShareAlike 4.0 International (GPL-3.0)
++    License: GNU General Public License v3.0
+     Link to License: https://www.gnu.org/licenses/gpl-3.0.html
+\ No newline at end of file
+diff --git a/frontend/src/components/Footer.jsx.save b/frontend/src/components/Footer.jsx.save
+deleted file mode 100644
+index 8c5581f..0000000
+--- a/frontend/src/components/Footer.jsx.save
++++ /dev/null
+@@ -1,46 +0,0 @@
+-import React from 'react';
+-
+-function Footer({ lang, T }) {
+-  return (
+-    <footer style={{ marginTop: '40px', padding: '24px 20px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-muted)', backgroundColor: 'var(--surface)', width: '100%', boxSizing: 'border-box' }}>
+-      <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+-
+-        {/* Top row — links */}
+-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', justifyContent: 'center', lineHeight: 2 }}>
+-          <a href="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
+-          <span style={{ color: 'var(--border)' }}>•</span>
+-          <a href="/terms" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Use</a>
+-          <span style={{ color: 'var(--border)' }}>•</span>
+-          <a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>About</a>
+-          <span style={{ color: 'var(--border)' }}>•</span>
+-          <a href="/docs.php" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>API Docs</a>
+-          <span style={{ color: 'var(--border)' }}>•</span>
+-          <a href="https://github.com/anafibnshahibul/WikiForms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
+-          <span style={{ color: 'var(--border)' }}>•</span>
+-          <a href="https://github.com/anafibnshahibul/WikiForms/issues" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Report a Bug</a>
+-        </div>
+-
+-        {/* Bottom row */}
+-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+-          <p style={{ margin: 0, textAlign: 'center', flex: 1 }}>
+-            Available under{' '}
+-            <a href="https://www.gnu.org/licenses/gpl-3.0.html" style={{ color: '#3366cc' }}>GPL-3.0</a>
+-            {' '}(docs) · <a href="https://www.gnu.org/licenses/gpl-3.0.html" style={{ color: '#3366cc' }}>GPL-3.0 licens e(code)</a>· Hosted on{' '}
+-            <a href="https://wikitech.wikimedia.org/wiki/Portal:Toolforge" style={{ color: '#3366cc' }}>Wikimedia Toolforge</a>
+-          </p>
+-          <a href="https://wikimediafoundation.org" target="_blank" rel="noopener noreferrer"
+-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '2px', backgroundColor: 'var(--bg)', textDecoration: 'none', flexShrink: 0 }}>
+-            <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/Wikimedia-logo.svg" alt="Wikimedia" width="22" height="22" style={{ display: 'block' }} />
+-            <span style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.3', whiteSpace: 'nowrap' }}>
+-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Powered By</span>
+-              Wikimedia
+-            </span>
+-          </a>
+-        </div>
+-
+-      </div>
+-    </footer>
+-  );
+-}
+-
+-export default Footer;
+diff --git a/frontend/src/components/FormBuilder.jsx b/frontend/src/components/FormBuilder.jsx
+index e7552ab..d6003ab 100644
+--- a/frontend/src/components/FormBuilder.jsx
++++ b/frontend/src/components/FormBuilder.jsx
+@@ -1,4 +1,5 @@
+ import React, { useState } from 'react';
++import { sanitizeHtml } from '../utils/sanitizeHtml.js';
+ import WikiMediaPanel from './WikiMediaPanel.jsx';
+ import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+ import RichTextEditor from './RichTextEditor';
+@@ -498,7 +499,7 @@ function PreviewMode({ questions, formTitle, description, coverImage, contentTyp
+         {section.fields.map((q, i) => (
+           <div key={q.id}>
+             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+-              <span dangerouslySetInnerHTML={{ __html: q.text || `Question ${i + 1}` }} />{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
++              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text || `Question ${i + 1}`) }} />{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
+             </label>
+             {q.type === 'text' && <input type="text" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+             {q.type === 'textarea' && <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
+diff --git a/frontend/src/components/QuizViewer.jsx b/frontend/src/components/QuizViewer.jsx
+index 17b84c5..544f3f9 100644
+--- a/frontend/src/components/QuizViewer.jsx
++++ b/frontend/src/components/QuizViewer.jsx
+@@ -1,4 +1,5 @@
+ import { apiFetch } from '../api.js';
++import { sanitizeHtml } from '../utils/sanitizeHtml.js';
+ import { evalCondition } from './FormBuilder.jsx';
+ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+ import React, { useState, useEffect, useMemo } from 'react';
+@@ -256,7 +257,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
+     const url = remoteData?.cover_image;
+     if (!url) return null;
+     if (url.includes('wiki/File:')) return `https://commons.wikimedia.org/wiki/Special:FilePath/${url.split('wiki/File:')[1]}`;
+-    return url;
++    return /^https:\/\//i.test(url) ? url : null;
+   }, [remoteData]);
+ 
+   const loadResponses = async () => {
+@@ -349,7 +350,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
+     return (
+       <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1.5px solid #d92d20' : '1px solid var(--border)', borderLeft: hasError ? '4px solid #d92d20' : '4px solid var(--border)', borderRadius: '0', padding: '16px', marginBottom: '8px' }}>
+         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
+-          {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
++          {i + 1}. <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(field.text) }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
+         </label>
+         {field.type === 'text' && <input type="text" placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
+         {field.type === 'textarea' && <textarea rows={3} placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
+@@ -465,14 +466,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
+                 return (
+                   <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: `4px solid ${isCorrect ? '#00af89' : '#d92d20'}`, borderRadius: '2px', padding: '16px 20px' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+-                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }} dangerouslySetInnerHTML={{ __html: q.text }} />
++                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
+                       <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 2, background: isCorrect ? '#00af8918' : '#d92d2018', color: isCorrect ? '#00af89' : '#d92d20', whiteSpace: 'nowrap' }}>
+                         {isCorrect ? <><Icon name='check' size={11} color='#00af89' style={{marginRight:3}}/>{T('correct')}</> : <><Icon name='x' size={11} color='#d92d20' style={{marginRight:3}}/>{T('incorrect')}</>}
+                       </span>
+                     </div>
+                     {ua && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 0' }}>{T('your_answer_label')}<strong style={{ color: 'var(--text-secondary)' }}>{ua}</strong></p>}
+                     {!isCorrect && correctAnswer && <p style={{ fontSize: 13, color: '#00af89', margin: '6px 0 0' }}>{T('correct_answer_label') || 'Correct answer: '}<strong>{correctAnswer}</strong></p>}
+-                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }} dangerouslySetInnerHTML={{ __html: feedback }} />}
++                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(feedback) }} />}
+                     {!isCorrect && (() => {
+                       const desc = revealed.description || q.description || '';
+                       const wdMatch = desc.match(/wikidata\.org\/wiki\/(Q\d+)/);
+diff --git a/frontend/src/components/RichTextEditor.jsx b/frontend/src/components/RichTextEditor.jsx
+index 90499b0..338bf6f 100644
+--- a/frontend/src/components/RichTextEditor.jsx
++++ b/frontend/src/components/RichTextEditor.jsx
+@@ -1,4 +1,5 @@
+ import React, { useRef, useEffect, useState } from 'react';
++import { sanitizeHtml } from '../utils/sanitizeHtml.js';
+ import Icon from './Icon.jsx';
+ 
+ // Supported Wikipedia interwiki prefixes
+@@ -147,7 +148,7 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter text...', style
+   // Sync external value → DOM only on mount
+   useEffect(() => {
+     if (editorRef.current && editorRef.current.innerHTML !== value) {
+-      editorRef.current.innerHTML = value || '';
++      editorRef.current.innerHTML = sanitizeHtml(value || '');
+     }
+   }, []);
+ 
+diff --git a/frontend/src/utils/sanitizeHtml.js b/frontend/src/utils/sanitizeHtml.js
+new file mode 100644
+index 0000000..4ffca38
+--- /dev/null
++++ b/frontend/src/utils/sanitizeHtml.js
+@@ -0,0 +1,83 @@
++// Minimal allowlist HTML sanitizer for rich text written by form authors.
++//
++// Question text and feedback are stored as HTML (see RichTextEditor) and rendered with
++// dangerouslySetInnerHTML for every visitor. Anyone can create a form, so without this a
++// malicious form runs script in the browser of everyone who opens it, including logged-in
++// users whose login token is kept in localStorage.
++//
++// Only the formatting the editor can produce is kept. Everything else is unwrapped
++// (tags removed, text kept) or dropped (script/style/etc. with their content).
++
++const ALLOWED_TAGS = new Set([
++  'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SUB', 'SUP', 'MARK', 'SMALL',
++  'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'CODE',
++  'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'FONT', 'A',
++]);
++const DROP_WITH_CONTENT = new Set([
++  'SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'NOSCRIPT', 'TEMPLATE', 'SVG', 'MATH',
++  'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'LINK', 'META', 'BASE', 'TITLE',
++]);
++const ALLOWED_STYLE_PROPS = new Set([
++  'color', 'background-color', 'font-weight', 'font-style', 'text-decoration',
++  'text-align', 'font-size', 'font-family',
++]);
++const SAFE_VALUE = /^[#\w\s.,%()-]+$/; // no url(), quotes, backslashes, or expressions
++const SAFE_HREF = /^(https?:|mailto:)/i;
++
++function cleanStyle(value) {
++  return value
++    .split(';')
++    .map(d => d.split(':'))
++    .filter(([prop, ...rest]) => {
++      const v = rest.join(':').trim();
++      return prop && ALLOWED_STYLE_PROPS.has(prop.trim().toLowerCase()) && SAFE_VALUE.test(v) && !/url\(|expression/i.test(v);
++    })
++    .map(([prop, ...rest]) => `${prop.trim()}: ${rest.join(':').trim()}`)
++    .join('; ');
++}
++
++function cleanNode(node, doc) {
++  for (const child of Array.from(node.childNodes)) {
++    if (child.nodeType === 3) continue; // text
++    if (child.nodeType !== 1) { child.remove(); continue; } // comments, etc.
++
++    const tag = child.tagName.toUpperCase();
++    if (DROP_WITH_CONTENT.has(tag)) { child.remove(); continue; }
++
++    cleanNode(child, doc); // sanitize descendants first
++
++    if (!ALLOWED_TAGS.has(tag)) {
++      // Unknown tag: keep its (already sanitized) children, drop the element itself.
++      while (child.firstChild) node.insertBefore(child.firstChild, child);
++      child.remove();
++      continue;
++    }
++
++    for (const attr of Array.from(child.attributes)) {
++      const name = attr.name.toLowerCase();
++      if (name === 'style') {
++        const cleaned = cleanStyle(attr.value);
++        if (cleaned) child.setAttribute('style', cleaned); else child.removeAttribute('style');
++      } else if (name === 'href' && tag === 'A' && SAFE_HREF.test(attr.value.trim())) {
++        continue;
++      } else if ((name === 'color' || name === 'size' || name === 'face') && tag === 'FONT' && SAFE_VALUE.test(attr.value)) {
++        continue;
++      } else {
++        child.removeAttribute(attr.name);
++      }
++    }
++    if (tag === 'A') {
++      child.setAttribute('target', '_blank');
++      child.setAttribute('rel', 'noopener noreferrer nofollow');
++    }
++  }
++}
++
++export function sanitizeHtml(html) {
++  if (html == null || html === '') return '';
++  const doc = new DOMParser().parseFromString(`<body>${String(html)}</body>`, 'text/html');
++  cleanNode(doc.body, doc);
++  return doc.body.innerHTML;
++}
++
++export default sanitizeHtml;
+diff --git a/toolinfo.json b/toolinfo.json
+index 031b81b..0f90f56 100644
+--- a/toolinfo.json
++++ b/toolinfo.json
+@@ -1,10 +1,10 @@
+ {
+-    "name": "wikiforms",
+-    "title": "WikiForms",
+-    "version": "2.0.0"
+-    "description": "Amazing Drag and Drop Form Builder for Wikimedia",
+-    "url": "https://wikiforms.toolforge.org",
+-    "keywords": "wikimedia, forms, drag-and-drop",
+-    "author": "Anaf",
+-    "repository": "https://gitlab.wikimedia.org/toolforge-repos/wikiforms"
+-  }
++  "name": "wikiforms",
++  "title": "WikiForms",
++  "version": "2.0.0",
++  "description": "Drag and drop form and quiz builder for Wikimedia users",
++  "url": "https://wikiforms.toolforge.org",
++  "keywords": "wikimedia, forms, quiz, drag-and-drop",
++  "author": "Anaf",
++  "repository": "https://github.com/anafibnshahibul/WikiForms"
++}
+-- 
+2.43.0
+

@@ -66,4 +66,4 @@ To keep the codebase maintainable, please ensure your code complies with these g
    ```
 3. **Open a Pull Request:** Navigate back to the primary source repository on GitHub and open a pull request against our `main` branch. Include a descriptive summary of your fixes or implementations.
 
-Once your pull request is audited and merged by a maintainer, your profile will be permanently cataloged on our live [Hall of Fame](https://toolforge.orghall-of-fame.html) tracking ledger!
+Once your pull request is audited and merged by a maintainer, your profile will be permanently cataloged on our live [Hall of Fame](https://wikiforms.toolforge.org/hall-of-fame.html) tracking ledger!

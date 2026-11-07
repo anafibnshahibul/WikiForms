@@ -3,7 +3,7 @@
 return [
 
     'openrouter' => [
-        'key' => env('OPENROUTER_API_KEY'),
+        'key' => env('OPENROUTER_API_KEY', env('OPENROUTER_KEY')),
     ],
 
     /*
@@ -19,9 +19,10 @@ return [
     */
 
     'mediawiki' => [
-    'client_id' => env('WIKI_CLIENT_ID'),
-    'client_secret' => env('WIKI_CLIENT_SECRET'),
-    'redirect' => 'https://wikiforms.toolforge.org/api/auth/mediawiki/callback',
+    // Both naming styles are accepted (.env.example uses MEDIAWIKI_*, production uses WIKI_*).
+    'client_id' => env('WIKI_CLIENT_ID', env('MEDIAWIKI_CLIENT_ID')),
+    'client_secret' => env('WIKI_CLIENT_SECRET', env('MEDIAWIKI_CLIENT_SECRET')),
+    'redirect' => env('MEDIAWIKI_REDIRECT_URI', 'https://wikiforms.toolforge.org/api/auth/mediawiki/callback'),
     ],
 
     'postmark' => [

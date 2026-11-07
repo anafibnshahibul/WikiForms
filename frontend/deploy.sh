@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 echo "🔄 Fetching the latest code from GitLab..."
 cd ~/frontend || exit
 git pull origin main

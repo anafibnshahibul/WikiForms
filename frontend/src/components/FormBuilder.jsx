@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { sanitizeHtml } from '../utils/sanitizeHtml.js';
 import WikiMediaPanel from './WikiMediaPanel.jsx';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import RichTextEditor from './RichTextEditor';
@@ -498,7 +499,7 @@ function PreviewMode({ questions, formTitle, description, coverImage, contentTyp
         {section.fields.map((q, i) => (
           <div key={q.id}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-              <span dangerouslySetInnerHTML={{ __html: q.text || `Question ${i + 1}` }} />{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
+              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text || `Question ${i + 1}`) }} />{q.required && <span style={{ color: '#d92d20', marginLeft: '4px' }}>*</span>}
             </label>
             {q.type === 'text' && <input type="text" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}
             {q.type === 'textarea' && <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '2px', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px' }} />}

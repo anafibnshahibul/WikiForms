@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://wikiform.toolforge.org/'),
+    'url' => env('APP_URL', 'https://wikiforms.toolforge.org/'),
 
     /*
     |--------------------------------------------------------------------------

@@ -12,8 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Enable session on API routes so session('wf_username') works for auth checks.
         $middleware->api(prepend: [
+            App\Http\Middleware\SecurityGate::class,
             Illuminate\Session\Middleware\StartSession::class,
         ]);
+        // Toolforge terminates TLS at its proxy; trust it so $request->ip() is the visitor,
+        // not the proxy (otherwise every visitor shares one throttle/ban bucket).
+        $middleware->trustProxies(at: '*');
         // All API routes use session-cookie auth rather than CSRF tokens.
         $middleware->validateCsrfTokens(except: [
             'api/*',

@@ -1,4 +1,5 @@
 import { apiFetch } from '../api.js';
+import { sanitizeHtml } from '../utils/sanitizeHtml.js';
 import { evalCondition } from './FormBuilder.jsx';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -256,7 +257,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     const url = remoteData?.cover_image;
     if (!url) return null;
     if (url.includes('wiki/File:')) return `https://commons.wikimedia.org/wiki/Special:FilePath/${url.split('wiki/File:')[1]}`;
-    return url;
+    return /^https:\/\//i.test(url) ? url : null;
   }, [remoteData]);
 
   const loadResponses = async () => {
@@ -349,7 +350,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     return (
       <div key={field.id} style={{ background: 'var(--surface)', border: hasError ? '1.5px solid #d92d20' : '1px solid var(--border)', borderLeft: hasError ? '4px solid #d92d20' : '4px solid var(--border)', borderRadius: '0', padding: '16px', marginBottom: '8px' }}>
         <label style={{ display: 'block', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
-          {i + 1}. <span dangerouslySetInnerHTML={{ __html: field.text }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
+          {i + 1}. <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(field.text) }} />{field.required && <span style={{ color: '#d92d20', marginLeft: 4 }}>*</span>}
         </label>
         {field.type === 'text' && <input type="text" placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
         {field.type === 'textarea' && <textarea rows={3} placeholder={T('your_answer')} value={answers[field.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [field.id]: e.target.value })); if (hasError) setValidationErrors(v => ({ ...v, [field.id]: false })); }} style={base} />}
@@ -465,14 +466,14 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
                 return (
                   <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderLeft: `4px solid ${isCorrect ? '#00af89' : '#d92d20'}`, borderRadius: '2px', padding: '16px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }} dangerouslySetInnerHTML={{ __html: q.text }} />
+                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
                       <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 2, background: isCorrect ? '#00af8918' : '#d92d2018', color: isCorrect ? '#00af89' : '#d92d20', whiteSpace: 'nowrap' }}>
                         {isCorrect ? <><Icon name='check' size={11} color='#00af89' style={{marginRight:3}}/>{T('correct')}</> : <><Icon name='x' size={11} color='#d92d20' style={{marginRight:3}}/>{T('incorrect')}</>}
                       </span>
                     </div>
                     {ua && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 0' }}>{T('your_answer_label')}<strong style={{ color: 'var(--text-secondary)' }}>{ua}</strong></p>}
                     {!isCorrect && correctAnswer && <p style={{ fontSize: 13, color: '#00af89', margin: '6px 0 0' }}>{T('correct_answer_label') || 'Correct answer: '}<strong>{correctAnswer}</strong></p>}
-                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }} dangerouslySetInnerHTML={{ __html: feedback }} />}
+                    {feedback && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', fontStyle: 'italic' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(feedback) }} />}
                     {!isCorrect && (() => {
                       const desc = revealed.description || q.description || '';
                       const wdMatch = desc.match(/wikidata\.org\/wiki\/(Q\d+)/);

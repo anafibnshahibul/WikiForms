@@ -4,44 +4,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
-// ============================================================
-// Security Gate — runs on every API request
-// ============================================================
+// Request gate (size, scanner agents, honeypot bans, origin check) lives in
+// App\Http\Middleware\SecurityGate and is registered in bootstrap/app.php.
 
-// 1. Block oversized requests (max 1MB) — prevents payload flooding
-if ((int) request()->header('Content-Length', 0) > 1_048_576) {
-    return response()->json(['status' => 'error', 'message' => 'Request too large.'], 413);
-}
-
-// 2. Block known scanner/bot user agents
-$ua = strtolower(request()->header('User-Agent', ''));
-$blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra', 'python-requests', 'go-http-client', 'java/', 'libwww', 'lwp-', 'wget/', 'curl/'];
-foreach ($blockedAgents as $bot) {
-    if (str_contains($ua, $bot)) {
-        trackSuspicious();
-        return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
-    }
-}
-
-// 3. Ban IPs that probed honeypot endpoints (3+ hits = scanner)
-$_honeypotHits = (int) cache()->get('honeypot_' . md5(request()->ip()), 0);
-if ($_honeypotHits >= 3) {
-    return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
-}
-
-// 4. Block IPs with too many suspicious requests (>50/hour)
-$_suspKey   = 'wf_suspicious_' . md5(request()->ip());
-$_suspCount = (int) cache()->get($_suspKey, 0);
-if ($_suspCount > 50) {
-    \Illuminate\Support\Facades\Log::warning('Suspicious IP auto-blocked', [
-        'ip'    => request()->ip(),
-        'ua'    => request()->userAgent(),
-        'count' => $_suspCount,
-    ]);
-    return response()->json(['status' => 'error', 'message' => 'Too many suspicious requests.'], 429);
-}
-
-// 5. Honeypot routes — scanners always probe these
+// Honeypot routes — scanners always probe these
 Route::any('/wp-admin',      fn() => abort(404));
 Route::any('/wp-login.php',  fn() => abort(404));
 Route::any('/.env',          fn() => abort(404));
@@ -60,30 +26,6 @@ Route::any('/admin',  function () {
 
 
 
-// 3. Custom error code 677 — request from unauthorized external origin.
-// Browsers always send Origin on cross-origin requests; direct server calls won't have it.
-$origin  = request()->header('Origin', '');
-$referer = request()->header('Referer', '');
-$allowed = 'https://wikiforms.toolforge.org';
-$isBrowser = !empty($origin) || !empty($referer);
-
-if ($isBrowser) {
-    $originOk  = empty($origin)  || str_starts_with($origin,  $allowed);
-    $refererOk = empty($referer) || str_starts_with($referer, $allowed);
-    if (!$originOk || !$refererOk) {
-        return response()->json([
-            'status'  => 'error',
-            'code'    => 677,
-            'message' => 'Request blocked: unauthorized origin.',
-        ], 403);
-    }
-}
-
-// 4. Cleanup expired auth tokens periodically (1% chance per request — cheap maintenance)
-if (random_int(1, 100) === 1) {
-    DB::table('auth_tokens')->where('expires_at', '<', now()->subDays(1))->delete();
-    DB::table('quiz_sessions')->where('created_at', '<', now()->subDays(7))->delete();
-}
 
 // Resolves and verifies the authenticated username.
 // Accepts either a valid server session or a verified HMAC-signed token
@@ -94,7 +36,7 @@ function resolveUser(): string {
     $token = request()->header('X-WF-Token', '');
     if (!$token) return '';
     $row = DB::table('auth_tokens')
-        ->where('token', $token)
+        ->where('token', hash('sha256', $token))
         ->where('expires_at', '>', now())
         ->first();
     return $row ? $row->username : '';
@@ -103,18 +45,11 @@ function resolveUser(): string {
 Route::post('/auth/logout', function (Request $request) {
     $token = $request->header('X-WF-Token', '');
     if ($token) {
-        DB::table('auth_tokens')->where('token', $token)->delete();
+        DB::table('auth_tokens')->where('token', hash('sha256', $token))->delete();
     }
     session()->flush();
     return response()->json(['status' => 'success', 'message' => 'Logged out.']);
 });
-
-// Track suspicious requests
-function trackSuspicious(): void {
-    $key = 'wf_suspicious_' . md5(request()->ip());
-    $count = (int) cache()->get($key, 0) + 1;
-    cache()->put($key, $count, 3600); // reset after 1 hour
-}
 
 // Session init and me — outside throttle group, no auth required
 Route::middleware('throttle:10,1')->post('/auth/session-init', function (Request $request) {
@@ -165,7 +100,8 @@ Route::middleware('throttle:20,1')->group(function () {
         ]);
 
         $sessionUser    = resolveUser();
-        $requestedOwner = $sessionUser ?: ($v['owner_username'] ?? 'Anonymous');
+        // Never trust a client-supplied owner: it would let anyone create forms "owned" by another user.
+        $requestedOwner = $sessionUser ?: 'Anonymous';
         $existing       = DB::table('forms')->where('slug', $v['slug'])->first();
 
         if ($existing) {
@@ -197,7 +133,7 @@ Route::middleware('throttle:20,1')->group(function () {
                 'timer_after_msg'  => json_encode($v['timer_after_msg'] ?? []),
                 'result_timing'    => $v['result_timing'] ?? 'instant',
                 'updated_at'       => now(),
-                'created_at'       => now(),
+                'created_at'       => $existing->created_at ?? now(),
             ]
         );
 
@@ -438,7 +374,7 @@ Route::middleware('throttle:20,1')->group(function () {
 
     // Heartbeat ping — client sends every 3 seconds while quiz is active.
     // Browser tab freeze causes JS to stop, missing beats flags the session.
-    Route::post('/quiz/heartbeat', function (Request $request) {
+    Route::withoutMiddleware('throttle:20,1')->middleware('throttle:40,1')->post('/quiz/heartbeat', function (Request $request) {
         $v = $request->validate([
             'session_id' => 'required|string|size:64',
         ]);
@@ -526,41 +462,69 @@ Route::middleware('throttle:20,1')->group(function () {
         if (!$requester) {
             return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
         }
-        if ($requester !== urldecode($username)) {
+        // Laravel has already URL-decoded the route parameter; decoding again would
+        // corrupt names containing '+' or '%'.
+        if ($requester !== $username) {
             return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
         }
+
+        // Filter in SQL and select only the light columns. The old version loaded every
+        // form row (including the large encrypted `questions` column) into PHP memory and
+        // ran two extra queries per form, which is what exhausts memory/time on Toolforge.
         $forms = DB::table('forms')
-            ->get()
-            ->filter(function ($form) use ($username) {
-                if ($form->owner_username === $username) return true;
-                $collabs = json_decode($form->collaborators ?? '[]', true);
-                return in_array($username, $collabs ?? []);
+            ->select('slug', 'title', 'content_type', 'owner_username', 'collaborators',
+                     'timer_type', 'created_at', 'updated_at')
+            ->where(function ($q) use ($requester) {
+                $q->where('owner_username', $requester)
+                  ->orWhere('collaborators', 'like', '%' . json_encode($requester, JSON_UNESCAPED_UNICODE) . '%')
+                  ->orWhere('collaborators', 'like', '%' . json_encode($requester) . '%');
             })
-            ->map(function ($form) {
-                $responseCount = DB::table('form_responses')
-                    ->where('form_slug', $form->slug)
-                    ->count();
-                $recentResponses = DB::table('form_responses')
-                    ->where('form_slug', $form->slug)
-                    ->orderBy('created_at', 'desc')
-                    ->limit(30)
-                    ->pluck('created_at');
-                return [
-                    'slug'           => $form->slug,
-                    'title'          => $form->title,
-                    'content_type'   => $form->content_type,
-                    'owner_username' => $form->owner_username,
-                    'collaborators'  => json_decode($form->collaborators ?? '[]'),
-                    'timer_type'     => $form->timer_type ?? 'none',
-                    'response_count' => $responseCount,
-                    'recent_dates'   => $recentResponses,
-                    'created_at'     => $form->created_at,
-                    'updated_at'     => $form->updated_at,
-                ];
+            ->orderByDesc('updated_at')
+            ->get()
+            // LIKE is only a pre-filter; confirm exact membership in PHP.
+            ->filter(function ($form) use ($requester) {
+                if ($form->owner_username === $requester) return true;
+                $collabs = json_decode($form->collaborators ?? '[]', true);
+                return is_array($collabs) && in_array($requester, $collabs, true);
             })
             ->values();
 
-        return response()->json(['status' => 'success', 'forms' => $forms]);
+        $slugs = $forms->pluck('slug')->all();
+        $counts = $slugs
+            ? DB::table('form_responses')->whereIn('form_slug', $slugs)
+                ->select('form_slug', DB::raw('COUNT(*) as c'))->groupBy('form_slug')
+                ->pluck('c', 'form_slug')
+            : collect();
+
+        // Last 30 response dates per form, fetched once (not once per form).
+        $recent = [];
+        if ($slugs) {
+            DB::table('form_responses')
+                ->whereIn('form_slug', $slugs)
+                ->orderByDesc('created_at')
+                ->limit(30 * count($slugs))
+                ->get(['form_slug', 'created_at'])
+                ->each(function ($r) use (&$recent) {
+                    if (count($recent[$r->form_slug] ?? []) < 30) {
+                        $recent[$r->form_slug][] = $r->created_at;
+                    }
+                });
+        }
+
+        $result = $forms->map(fn($form) => [
+            'slug'           => $form->slug,
+            'title'          => $form->title,
+            'content_type'   => $form->content_type,
+            'owner_username' => $form->owner_username,
+            'collaborators'  => json_decode($form->collaborators ?? '[]'),
+            'timer_type'     => $form->timer_type ?? 'none',
+            'response_count' => (int) ($counts[$form->slug] ?? 0),
+            'recent_dates'   => $recent[$form->slug] ?? [],
+            'created_at'     => $form->created_at,
+            'updated_at'     => $form->updated_at,
+        ])->values();
+
+        return response()->json(['status' => 'success', 'forms' => $result]);
     });
 
 
@@ -573,7 +537,10 @@ Route::middleware('throttle:20,1')->group(function () {
 // Returns all live translations for a given language.
 // Falls back to English for any key missing in the requested language.
 // Cached for 10 minutes to avoid repeated DB queries on every page load.
-Route::get('/usr-lang/{lang}', function ($lang) {
+Route::middleware('throttle:60,1')->get('/usr-lang/{lang}', function ($lang) {
+    if (!preg_match('/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/', $lang)) {
+        return response()->json(['status' => 'error', 'message' => 'Invalid language code.'], 400);
+    }
     $cacheKey = 'translations_' . $lang;
     $keys = Cache::remember($cacheKey, 600, function () use ($lang) {
         $live = DB::table('translations')
@@ -620,13 +587,13 @@ Route::get('/usr-lang', function () {
 });
 
 // Logged-in Wikipedia user submits a translation for a key (creates or updates as draft).
-Route::post('/editor', function (Request $request) {
+Route::middleware('throttle:30,1')->post('/editor', function (Request $request) {
     $sessionUser = resolveUser();
     if (!$sessionUser) {
         return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
     }
     $v = $request->validate([
-        'lang_code'       => 'required|string|max:10',
+        'lang_code'       => ['required', 'string', 'max:10', 'regex:/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/'],
         'lang_name'       => 'required|string|max:100',
         'translation_key' => 'required|string|max:100',
         'value'           => 'required|string|max:2000',
@@ -637,6 +604,13 @@ Route::post('/editor', function (Request $request) {
         ->where('lang_code', $v['lang_code'])
         ->where('translation_key', $v['translation_key'])
         ->first();
+
+    // A live translation can only be changed by the person who contributed it.
+    // Without this, anyone could overwrite someone else's translation (it became their
+    // draft) and then publish it themselves.
+    if ($exists && $exists->status === 'live' && $exists->contributed_by !== $sessionUser) {
+        return response()->json(['status' => 'error', 'message' => 'This translation is live and owned by another contributor.'], 403);
+    }
 
     // Never allow editing system-seeded English live keys directly
     if ($exists && $v['lang_code'] === 'en' && $exists->contributed_by === 'system' && $exists->status === 'live') {
@@ -660,7 +634,7 @@ Route::post('/editor', function (Request $request) {
 });
 
 // Any logged-in Wikipedia user can publish a draft translation.
-Route::post('/publisher', function (Request $request) {
+Route::middleware('throttle:30,1')->post('/publisher', function (Request $request) {
     $sessionUser = resolveUser();
     if (!$sessionUser) {
         return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);

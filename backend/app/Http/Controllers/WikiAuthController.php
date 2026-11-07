@@ -14,11 +14,15 @@ class WikiAuthController extends Controller
     {
         $baseUrl = "https://meta.wikimedia.org/w/rest.php/oauth2/authorize";
 
+        // Remember the state in the session so the callback can verify it (CSRF protection).
+        $state = bin2hex(random_bytes(16));
+        session(['wf_oauth_state' => $state]);
+
         $queries = http_build_query([
             'client_id'     => config('services.mediawiki.client_id'),
             'response_type' => 'code',
             'redirect_uri'  => config('services.mediawiki.redirect'),
-            'state'         => bin2hex(random_bytes(16)),
+            'state'         => $state,
         ]);
 
         return redirect($baseUrl . '?' . $queries);
@@ -27,8 +31,14 @@ class WikiAuthController extends Controller
     public function handleMediaWikiCallback(Request $request)
     {
         if ($request->has('error')) {
-            $msg = json_encode($request->get('error_description', 'Authorization denied'));
+            $msg = json_encode('Authorization denied', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             return $this->renderResult('WIKI_AUTH_ERROR', null, $msg);
+        }
+
+        $expectedState = session()->pull('wf_oauth_state');
+        $givenState    = (string) $request->get('state', '');
+        if (!$expectedState || !hash_equals($expectedState, $givenState)) {
+            return $this->renderResult('WIKI_AUTH_ERROR', null, json_encode('Login failed (invalid state). Please try again.'));
         }
 
         try {
@@ -56,15 +66,17 @@ class WikiAuthController extends Controller
 
             $userData = $userResponse->json();
             $username = $userData['username'] ?? 'Unknown User';
-            $email    = $userData['email'] ?? null;
+            // Deliberately NOT reading the user's email: the privacy policy promises WikiForms
+            // stores no email addresses. The users table requires a unique, non-null email,
+            // so a non-routable placeholder derived from the username is stored instead.
 
             $user = User::where('name', $username)->first();
 
             if (!$user) {
                 $user = User::create([
                     'name'     => $username,
-                    'email'    => $email,
-                    'password' => bcrypt(uniqid()),
+                    'email'    => substr(hash('sha256', $username), 0, 32) . '@users.wikiforms.invalid',
+                    'password' => bcrypt(bin2hex(random_bytes(16))),
                 ]);
             }
 
@@ -80,7 +92,7 @@ class WikiAuthController extends Controller
             // DB verification is more reliable than HMAC across key rotations.
             $authToken = bin2hex(random_bytes(32));
             DB::table('auth_tokens')->insert([
-                'token'      => $authToken,
+                'token'      => hash('sha256', $authToken),
                 'username'   => $username,
                 'expires_at' => now()->addDays(30),
                 'created_at' => now(),
@@ -92,9 +104,8 @@ class WikiAuthController extends Controller
             $sessionToken = bin2hex(random_bytes(24));
             cache()->put('wf_auth_token_' . $sessionToken, $username, now()->addMinutes(2));
 
-            $userJson = json_encode([
+            $userJson = json_encode(flags: JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT, value: [
                 'username'      => $username,
-                'email'         => $email,
                 'auth_token'    => $authToken,
                 'session_token' => $sessionToken,
             ]);
