@@ -405,7 +405,7 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     );
   }
 
-  if (scheduleStatus === 'after') {
+  if (scheduleStatus === 'after' && !canEdit) {
     const msg = remoteData?.timer_after_msg?.[lang] || remoteData?.timer_after_msg?.en || T('quiz_ended');
     return (
       <div className="wikiform-container" style={{ marginTop: 60, textAlign: 'center' }}>
@@ -526,6 +526,8 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
     );
   }
 
+  const quizHasEnded = scheduleStatus === 'after';
+
   // ===== START PAGE =====
   if (!isStarted) return (
     <div className="wikiform-container" style={{ marginTop: 32 }}>
@@ -552,13 +554,20 @@ function QuizViewer({ lang, T, remoteData, wikiUser, onLogin, onEditForm }) {
           {coverImageUrl && <img src={coverImageUrl} alt="Cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 2, marginBottom: 20 }} onError={e => { e.target.style.display = 'none'; }} />}
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>{remoteData?.title}</h1>
           {remoteData?.description && <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 15, lineHeight: 1.6 }}>{remoteData.description}</p>}
-          {!isForm && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 2, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
-          <div>
-            {!fetchedQuestions
-              ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('preparing')}</p>
-              : <button className="wiki-btn" onClick={() => setIsStarted(true)} style={{ padding: '12px 40px', fontSize: 16, fontWeight: 700, backgroundColor: accent, borderColor: accent }}>{isForm ? T('start_form') : T('start_quiz')}</button>
-            }
-          </div>
+          {!isForm && !quizHasEnded && <div style={{ display: 'inline-block', background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '5px 14px', borderRadius: 2, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>{T('anticheat_active')}</div>}
+          {quizHasEnded ? (
+            <div style={{ display: 'inline-block', background: '#fff0f0', border: '1px solid #d92d20', color: '#d92d20', padding: '10px 18px', borderRadius: 2, fontSize: 14, fontWeight: 600 }}>
+              {remoteData?.timer_after_msg?.[lang] || remoteData?.timer_after_msg?.en || T('quiz_ended')}
+              {' '}— viewing as owner/collaborator. Use the Responses tab above to see submissions.
+            </div>
+          ) : (
+            <div>
+              {!fetchedQuestions
+                ? <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{T('preparing')}</p>
+                : <button className="wiki-btn" onClick={() => setIsStarted(true)} style={{ padding: '12px 40px', fontSize: 16, fontWeight: 700, backgroundColor: accent, borderColor: accent }}>{isForm ? T('start_form') : T('start_quiz')}</button>
+              }
+            </div>
+          )}
         </div>
       )}
 

@@ -1,0 +1,2 @@
+backend: kubernetes
+type: php8.4

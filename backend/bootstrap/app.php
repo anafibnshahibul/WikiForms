@@ -10,9 +10,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: '*');
         // Enable session on API routes so session('wf_username') works for auth checks.
         $middleware->api(prepend: [
             Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
         // All API routes use session-cookie auth rather than CSRF tokens.
         $middleware->validateCsrfTokens(except: [

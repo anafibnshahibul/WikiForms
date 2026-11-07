@@ -23,6 +23,7 @@ const FALLBACK = {
   quiz_not_started: 'This quiz has not started yet.', quiz_ended: 'This quiz has ended.',
   starts_at: 'Starts: ', warning_msg: 'Warning: Do not leave the quiz!',
   select_placeholder: 'Select...', no_questions: 'No questions found.',
+  banner_message: '🚀 Welcome to WikiForms! Create, manage, and share forms natively within the Wikimedia ecosystem.',
   results_later: 'Results will be shared by the owner later.',
 };
 

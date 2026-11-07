@@ -3,6 +3,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use App\Models\Form;
+use App\Policies\FormPolicy;
 
 // ============================================================
 // Security Gate — runs on every API request
@@ -15,7 +17,7 @@ if ((int) request()->header('Content-Length', 0) > 1_048_576) {
 
 // 2. Block known scanner/bot user agents
 $ua = strtolower(request()->header('User-Agent', ''));
-$blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra', 'python-requests', 'go-http-client', 'java/', 'libwww', 'lwp-', 'wget/', 'curl/'];
+$blockedAgents = ['sqlmap', 'nikto', 'nmap', 'masscan', 'zgrab', 'dirbuster', 'gobuster', 'nuclei', 'burpsuite', 'hydra'];
 foreach ($blockedAgents as $bot) {
     if (str_contains($ua, $bot)) {
         trackSuspicious();
@@ -66,6 +68,7 @@ $origin  = request()->header('Origin', '');
 $referer = request()->header('Referer', '');
 $allowed = 'https://wikiforms.toolforge.org';
 $isBrowser = !empty($origin) || !empty($referer);
+$isStateChanging = in_array(request()->method(), ['POST', 'PUT', 'PATCH', 'DELETE']);
 
 if ($isBrowser) {
     $originOk  = empty($origin)  || str_starts_with($origin,  $allowed);
@@ -77,12 +80,19 @@ if ($isBrowser) {
             'message' => 'Request blocked: unauthorized origin.',
         ], 403);
     }
+} elseif ($isStateChanging && !request()->header('X-WF-Token') && !session('wf_username')) {
+    // Non-browser state-changing request with no Origin/Referer AND no auth proof — block.
+    return response()->json([
+        'status'  => 'error',
+        'code'    => 677,
+        'message' => 'Request blocked: unauthorized origin.',
+    ], 403);
 }
 
 // 4. Cleanup expired auth tokens periodically (1% chance per request — cheap maintenance)
 if (random_int(1, 100) === 1) {
     DB::table('auth_tokens')->where('expires_at', '<', now()->subDays(1))->delete();
-    DB::table('quiz_sessions')->where('created_at', '<', now()->subDays(7))->delete();
+    DB::table('quiz_sessions')->where('started_at', '<', now()->subDays(7))->delete();
 }
 
 // Resolves and verifies the authenticated username.
@@ -93,11 +103,24 @@ function resolveUser(): string {
     if ($fromSession) return $fromSession;
     $token = request()->header('X-WF-Token', '');
     if (!$token) return '';
+
+    // Rate-limit token lookup attempts per IP to slow down token-guessing.
+    $guessKey = 'wf_token_guess_' . md5(request()->ip());
+    $guesses  = (int) cache()->get($guessKey, 0);
+    if ($guesses > 100) {
+        return '';
+    }
+
     $row = DB::table('auth_tokens')
         ->where('token', $token)
         ->where('expires_at', '>', now())
         ->first();
-    return $row ? $row->username : '';
+
+    if (!$row) {
+        cache()->put($guessKey, $guesses + 1, 3600);
+        return '';
+    }
+    return $row->username;
 }
 // ── Logout — invalidate token immediately ──────────────────────────
 Route::post('/auth/logout', function (Request $request) {
@@ -117,7 +140,7 @@ function trackSuspicious(): void {
 }
 
 // Session init and me — outside throttle group, no auth required
-Route::middleware('throttle:10,1')->post('/auth/session-init', function (Request $request) {
+Route::middleware('throttle:30,1,wfsess')->post('/auth/session-init', function (Request $request) {
     $token = $request->input('session_token', '');
     if (!$token) {
         return response()->json(['status' => 'error', 'message' => 'No token.'], 400);
@@ -127,6 +150,7 @@ Route::middleware('throttle:10,1')->post('/auth/session-init', function (Request
         return response()->json(['status' => 'error', 'message' => 'Invalid or expired token.'], 403);
     }
     cache()->forget('wf_auth_token_' . $token);
+    session()->regenerate();
     session(['wf_username' => $username]);
     return response()->json(['status' => 'success', 'username' => $username]);
 });
@@ -139,7 +163,7 @@ Route::get('/auth/me', function () {
     return response()->json(['status' => 'success', 'username' => $username]);
 });
 
-Route::middleware('throttle:20,1')->group(function () {
+Route::middleware('throttle:600,1,wfapi')->group(function () {
 
     Route::get('/test-connection', function () {
         return response()->json(['status' => 'success', 'message' => 'Connected!']);
@@ -169,10 +193,8 @@ Route::middleware('throttle:20,1')->group(function () {
         $existing       = DB::table('forms')->where('slug', $v['slug'])->first();
 
         if ($existing) {
-            $collaborators = json_decode($existing->collaborators ?? '[]', true) ?? [];
-            $isOwner       = $existing->owner_username === $sessionUser;
-            $isCollab      = in_array($sessionUser, $collaborators);
-            if (!$sessionUser || (!$isOwner && !$isCollab)) {
+            $existingModel = Form::where('slug', $v['slug'])->first();
+            if (!$sessionUser || !(new FormPolicy())->update($sessionUser, $existingModel)) {
                 return response()->json(['status' => 'error', 'message' => 'Forbidden: you do not own this form.'], 403);
             }
             $requestedOwner = $existing->owner_username;
@@ -239,11 +261,9 @@ Route::middleware('throttle:20,1')->group(function () {
             return response()->json(['status' => 'error', 'message' => 'Failed to decrypt form data'], 500);
         }
 
-        $requester     = resolveUser();
-        $collaborators = json_decode($form->collaborators ?? '[]', true) ?? [];
-        $isOwner       = $form->owner_username === $requester;
-        $isCollab      = in_array($requester, $collaborators);
-        if (!$isOwner && !$isCollab) {
+        $requester = resolveUser();
+        $formModel = Form::where('slug', $slug)->first();
+        if (!(new FormPolicy())->view($requester, $formModel)) {
             $questions = array_map(function ($q) {
                 unset($q['correctAnswer'], $q['successMsg'], $q['failMsg']);
                 return $q;
@@ -252,13 +272,15 @@ Route::middleware('throttle:20,1')->group(function () {
         return response()->json(['status' => 'success', 'questions' => $questions]);
     });
 
-    // Delete form — owner only
+    // Delete form — owner only (authorization via FormPolicy)
     Route::delete('/delete-form/{slug}', function ($slug) {
         $requester = resolveUser();
         if (!$requester) return response()->json(['status' => 'error', 'message' => 'Login required.'], 403);
-        $form = DB::table('forms')->where('slug', $slug)->first();
+        $form = Form::where('slug', $slug)->first();
         if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found.'], 404);
-        if ($form->owner_username !== $requester) return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+        if (!(new FormPolicy())->delete($requester, $form)) {
+            return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+        }
         DB::table('form_responses')->where('form_slug', $slug)->delete();
         DB::table('quiz_sessions')->where('form_slug', $slug)->delete();
         DB::table('forms')->where('slug', $slug)->delete();
@@ -287,7 +309,7 @@ Route::middleware('throttle:20,1')->group(function () {
         return response()->json(['status' => 'success', 'leaderboard' => $rows]);
     });
 
-    Route::middleware('throttle:10,1')->post('/save-response', function (Request $request) {
+    Route::middleware('throttle:300,1,wfsave')->post('/save-response', function (Request $request) {
         $v = $request->validate([
             'form_slug' => 'required|string',
             'title'     => 'required|string',
@@ -352,11 +374,9 @@ Route::middleware('throttle:20,1')->group(function () {
         $form = DB::table('forms')->where('slug', $slug)->first();
         if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
 
-        $requester     = resolveUser();
-        $collaborators = json_decode($form->collaborators ?? '[]', true) ?? [];
-        $isOwner       = $form->owner_username === $requester;
-        $isCollab      = in_array($requester, $collaborators);
-        if (!$requester || (!$isOwner && !$isCollab)) {
+        $requester = resolveUser();
+        $formModel = Form::where('slug', $slug)->first();
+        if (!$requester || !(new FormPolicy())->view($requester, $formModel)) {
             return response()->json(['status' => 'error', 'message' => 'Forbidden: login required.'], 403);
         }
 
@@ -401,7 +421,7 @@ Route::middleware('throttle:20,1')->group(function () {
     // ============================================================
 
     // Start a quiz session — returns a session token and server-side deadline.
-    Route::middleware('throttle:10,1')->post('/quiz/start', function (Request $request) {
+    Route::middleware('throttle:30,1,wfsess')->post('/quiz/start', function (Request $request) {
         $v = $request->validate([
             'form_slug' => 'required|string',
             'username'  => 'nullable|string',
@@ -438,7 +458,7 @@ Route::middleware('throttle:20,1')->group(function () {
 
     // Heartbeat ping — client sends every 3 seconds while quiz is active.
     // Browser tab freeze causes JS to stop, missing beats flags the session.
-    Route::post('/quiz/heartbeat', function (Request $request) {
+    Route::withoutMiddleware('throttle:600,1,wfapi')->middleware('throttle:3000,1,wfbeat')->post('/quiz/heartbeat', function (Request $request) {
         $v = $request->validate([
             'session_id' => 'required|string|size:64',
         ]);
@@ -483,7 +503,7 @@ Route::middleware('throttle:20,1')->group(function () {
     });
 
     // Validate session before accepting submission
-    Route::middleware('throttle:10,1')->post('/quiz/validate-session', function (Request $request) {
+    Route::middleware('throttle:30,1,wfsess')->post('/quiz/validate-session', function (Request $request) {
         $v = $request->validate([
             'session_id' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]+$/'],
             'form_slug'  => 'required|string',

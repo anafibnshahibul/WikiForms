@@ -43,6 +43,7 @@ function MyFormsDashboard({ T, wikiUser, onLogin, onEditForm, onSelectType, onNa
   const [sortBy, setSortBy]     = useState('updated');
   const [filter, setFilter]     = useState('all');
   const [search, setSearch]     = useState('');
+  const [confirmOpenFor, setConfirmOpenFor] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [confirmSlug, setConfirmSlug] = useState('');
   const [showBadge, setShowBadge] = useState(false);
@@ -94,8 +95,13 @@ function MyFormsDashboard({ T, wikiUser, onLogin, onEditForm, onSelectType, onNa
       const data = await res.json();
       if (data.status === 'success') {
         setForms(f => f.filter(x => x.slug !== slug));
+        setConfirmOpenFor(null);
+      } else {
+        alert(data.message || 'Failed to delete form.');
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('Network error while deleting.');
+    }
     setDeleting(null);
     setConfirmSlug('');
   };
@@ -328,26 +334,26 @@ function MyFormsDashboard({ T, wikiUser, onLogin, onEditForm, onSelectType, onNa
                     <Icon name='link' size={12} style={{marginRight:5}}/>Copy Link
                   </button>
                   {isOwner && (
-                    <button onClick={() => setDeleting(deleting === form.slug ? null : form.slug)}
+                    <button onClick={() => { setConfirmOpenFor(confirmOpenFor === form.slug ? null : form.slug); setConfirmSlug(''); }}
                       style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600, border: '1px solid #fecdca', borderRadius: 2, cursor: 'pointer', color: '#d92d20', background: 'var(--bg)', fontFamily: 'inherit', marginLeft: 'auto' }}>
                       <Icon name='trash' size={12} style={{marginRight:5}}/>Delete
                     </button>
                   )}
                 </div>
-                {deleting === form.slug && (
+                {confirmOpenFor === form.slug && (
                   <div style={{ marginTop: 12, background: '#fff5f5', border: '1px solid #fecdca', borderRadius: 2, padding: '12px 16px' }}>
                     <p style={{ fontSize: 13, color: '#d92d20', margin: '0 0 10px', fontWeight: 600 }}>
                       ⚠️ This will permanently delete the form and all its responses. Type <strong>{form.slug}</strong> to confirm.
                     </p>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <input type="text" placeholder={`Type: ${form.slug}`} value={confirmSlug} onChange={e => setConfirmSlug(e.target.value)}
-                        style={{ flex: 1, padding: '7px 10px', border: '1px solid #fecdca', borderRadius: 2, fontSize: 13, fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)' }} />
+                        style={{ flex: '1 1 160px', minWidth: 0, padding: '7px 10px', border: '1px solid #fecdca', borderRadius: 2, fontSize: 13, fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
                       <button onClick={() => handleDelete(form.slug)} disabled={confirmSlug !== form.slug || deleting === form.slug}
-                        style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 2, cursor: confirmSlug === form.slug ? 'pointer' : 'not-allowed', background: confirmSlug === form.slug ? '#d92d20' : '#fecdca', color: 'white', fontFamily: 'inherit' }}>
+                        style={{ flex: '1 1 auto', padding: '7px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 2, cursor: confirmSlug === form.slug ? 'pointer' : 'not-allowed', background: confirmSlug === form.slug ? '#d92d20' : '#fecdca', color: 'white', fontFamily: 'inherit' }}>
                         {deleting === form.slug ? 'Deleting...' : 'Delete'}
                       </button>
-                      <button onClick={() => { setDeleting(null); setConfirmSlug(''); }}
-                        style={{ padding: '7px 14px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', background: 'var(--bg)', color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+                      <button onClick={() => { setConfirmOpenFor(null); setConfirmSlug(''); }}
+                        style={{ flex: '1 1 auto', padding: '7px 14px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer', background: 'var(--bg)', color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
                         Cancel
                       </button>
                     </div>

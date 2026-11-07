@@ -8,7 +8,7 @@ const AboutPage     = React.lazy(() => import('./components/AboutPage'));
 const PrivacyPage   = React.lazy(() => import('./components/PrivacyPage'));
 const TermsPage     = React.lazy(() => import('./components/TermsPage'));
 const MyFormsDashboard = React.lazy(() => import('./components/MyFormsDashboard'));
-import { loadLang } from './i18n';
+import { loadLang, t as tFallback } from './i18n';
 import { apiFetch } from './api.js';
 const FormBuilder = React.lazy(() => import('./components/FormBuilder'));
 import QuizViewer from './components/QuizViewer';
@@ -73,8 +73,9 @@ function App() {
 
   // T() uses live translations state; falls back to i18n module cache (which has FALLBACK).
   const T = (key, vars = {}) => {
-    let val = translations[key] ?? key;
-    if (val === key) val = key; // i18n module fallback already applied via loadLang
+    let val = translations[key];
+    if (val === undefined || val === null) val = tFallback(key);
+    if (val === key) return ''; // i18n module itself had no fallback either — let caller's || handle it
     Object.entries(vars).forEach(([k, v]) => { val = val.replace(`{${k}}`, v); });
     return val;
   };
@@ -223,11 +224,12 @@ function App() {
       });
       if (res.ok) {
         setGeneratedUrl(`${window.location.origin}/view/${finalSlug}`);
+        setCustomSlug(finalSlug);
+        setEditSlug(finalSlug);
         setStatusMessage(T('published_success'));
-        setEditSlug(null);
-        setIsEditMode(false);
       } else {
-        setStatusMessage(T('save_failed'));
+        const err = await res.json().catch(() => ({}));
+        setStatusMessage(err.message || T('save_failed'));
       }
     } catch { setStatusMessage(T('server_error')); }
   };

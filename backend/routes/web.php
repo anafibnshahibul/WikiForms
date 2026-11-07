@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\Request;
 use App\Http\Controllers\WikiAuthController;
+use App\Models\Form;
+use App\Policies\FormPolicy;
 
 Route::get('/api/auth/mediawiki', [WikiAuthController::class, 'redirectToMediaWiki']);
 Route::get('/api/auth/mediawiki/callback', [WikiAuthController::class, 'handleMediaWikiCallback']);
@@ -29,14 +31,12 @@ Route::post('/api/get-form-for-edit/{slug}', function ($slug) {
         return response()->json(['status' => 'error', 'message' => 'Not logged in'], 401);
     }
 
-    $form = DB::table('forms')->where('slug', $slug)->first();
-    if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+    $formModel = Form::where('slug', $slug)->first();
+    if (!$formModel) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+    $form = $formModel;
+    $collaborators = $formModel->collaborators_list;
 
-    $collaborators = json_decode($form->collaborators ?? '[]', true);
-    $isOwner = $user->name === $form->owner_username;
-    $isCollaborator = in_array($user->name, $collaborators);
-
-    if (!$isOwner && !$isCollaborator) {
+    if (!(new FormPolicy())->update($user->name, $formModel)) {
         return response()->json(['status' => 'error', 'message' => 'Permission denied'], 403);
     }
 
@@ -69,11 +69,13 @@ Route::post('/api/add-collaborator', function (Request $request) {
         'new_collaborator' => 'required|string',
     ]);
 
-    $form = DB::table('forms')->where('slug', $v['slug'])->first();
-    if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
-    if ($form->owner_username !== $user->name) return response()->json(['status' => 'error', 'message' => 'Permission denied'], 403);
+    $formModel = Form::where('slug', $v['slug'])->first();
+    if (!$formModel) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+    if (!(new FormPolicy())->manageCollaborators($user->name, $formModel)) {
+        return response()->json(['status' => 'error', 'message' => 'Permission denied'], 403);
+    }
 
-    $collaborators = json_decode($form->collaborators ?? '[]', true);
+    $collaborators = $formModel->collaborators_list;
     if (!in_array($v['new_collaborator'], $collaborators)) $collaborators[] = $v['new_collaborator'];
     DB::table('forms')->where('slug', $v['slug'])->update(['collaborators' => json_encode($collaborators)]);
 
@@ -90,12 +92,14 @@ Route::post('/api/remove-collaborator', function (Request $request) {
         'collaborator' => 'required|string',
     ]);
 
-    $form = DB::table('forms')->where('slug', $v['slug'])->first();
-    if (!$form) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
-    if ($form->owner_username !== $user->name) return response()->json(['status' => 'error', 'message' => 'Permission denied'], 403);
+    $formModel = Form::where('slug', $v['slug'])->first();
+    if (!$formModel) return response()->json(['status' => 'error', 'message' => 'Form not found'], 404);
+    if (!(new FormPolicy())->manageCollaborators($user->name, $formModel)) {
+        return response()->json(['status' => 'error', 'message' => 'Permission denied'], 403);
+    }
 
     $collaborators = array_values(array_filter(
-        json_decode($form->collaborators ?? '[]', true),
+        $formModel->collaborators_list,
         fn($c) => $c !== $v['collaborator']
     ));
     DB::table('forms')->where('slug', $v['slug'])->update(['collaborators' => json_encode($collaborators)]);

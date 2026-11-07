@@ -65,7 +65,7 @@ function SortableField({ field, idx, selectedId, setSelectedId, updateField, del
   const [showWikiMedia, setShowWikiMedia] = useState(false);
 
   return (
-    <div ref={setNodeRef} style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '2px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none' }}
+    <div ref={setNodeRef}
       {...attributes} {...listeners}
       style={{ ...style, background: 'var(--surface)', border: `1px solid ${isSelected ? accent : 'var(--border-light)'}`, borderLeft: `3px solid ${isSelected ? accent : 'transparent'}`, borderRadius: '2px', padding: '16px 18px', marginBottom: '10px', transition: 'border-color 0.15s', boxShadow: isSelected ? 'var(--shadow-md)' : 'none', cursor: 'grab', touchAction: 'none' }}
       onClick={() => setSelectedId(isSelected ? null : field.id)}
@@ -265,12 +265,19 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
     }
   };
 
-  const handlePublish = () => {
+  const [isPublishing, setIsPublishing] = useState(false);
+  const handlePublish = async () => {
+    if (isPublishing) return;
     if (!formTitle.trim()) {
       alert(lang === 'bn' ? 'অনুগ্রহ করে একটি শিরোনাম দিন!' : 'Please provide a title!');
       return;
     }
-    submitConfiguration({ timerType, timerDuration, timerStart, timerEnd, timerBeforeMsg, timerAfterMsg, resultTiming });
+    setIsPublishing(true);
+    try {
+      await submitConfiguration({ timerType, timerDuration, timerStart, timerEnd, timerBeforeMsg, timerAfterMsg, resultTiming });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const addCollaborator = async () => {
@@ -364,7 +371,7 @@ function FormBuilder({ lang, contentType, editSlug, formTitle, setFormTitle, des
                 </div>
 
                 <div className="fb-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingBottom: '80px' }}>
-                  <button onClick={handlePublish} className="wiki-btn" style={{ backgroundColor: accent, borderColor: accent, padding: '12px 28px', fontWeight: '700', flex: 1 }}>{c.publish}</button>
+                  <button onClick={handlePublish} disabled={isPublishing} className="wiki-btn" style={{ backgroundColor: accent, borderColor: accent, padding: '12px 28px', fontWeight: '700', flex: 1, opacity: isPublishing ? 0.6 : 1, cursor: isPublishing ? 'not-allowed' : 'pointer' }}>{isPublishing ? '...' : c.publish}</button>
                   <button onClick={onCancel} className="wiki-btn-secondary" style={{ padding: '12px 20px' }}>{c.cancel}</button>
                 </div>
               </>
